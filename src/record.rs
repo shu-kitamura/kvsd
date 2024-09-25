@@ -1,3 +1,5 @@
+use crate::error::RecordError;
+
 #[derive(Debug, PartialEq)]
 pub struct Record {
     key: String,
@@ -33,39 +35,54 @@ impl Record {
         vec
     }
 
-    pub fn from_vec(vec: Vec<u8>) -> Self {
+    pub fn from_vec(vec: Vec<u8>) -> Result<Self, RecordError> {
         let mut start_index: usize = 0;
 
         // 8バイトまでがキーの長さ
-        let key_len: usize = usize::from_be_bytes(
-            vec[start_index..8].to_vec().try_into().unwrap()
-        );
+        let key_len: usize = match vec[start_index..8].to_vec().try_into() {
+                Ok(bytes) => usize::from_be_bytes(bytes),
+                Err(_) => return Err(RecordError::FailedFromBytes("failed to convert key length".to_string()))
+            };
         start_index = 8;
 
         // 8 ~ key_len バイトまでがキー
-        let key: String = String::from_utf8(vec[start_index..start_index+key_len].to_vec()).unwrap();
+        let key: String = match String::from_utf8(vec[start_index..start_index+key_len].to_vec()){
+            Ok(s) => s,
+            Err(e) => return Err(RecordError::FailedFromBytes(e.to_string()))
+        };
         start_index += key_len;
 
         // key_len ~ 8バイトまでが値の長さ
-        let value_len: usize = usize::from_be_bytes(
-            vec[start_index..start_index+8].to_vec().try_into().unwrap()
-        );
+        let value_len: usize = match vec[start_index..start_index+8].to_vec().try_into() {
+            Ok(bytes) => usize::from_be_bytes(bytes),
+            Err(_) => return Err(RecordError::FailedFromBytes("failed to convert value length".to_string()))
+        };
         start_index += 8;
 
         // key_len+8 ~ value_len バイトまでが値
-        let value: String = String::from_utf8(vec[start_index..start_index+value_len].to_vec()).unwrap();
+        let value: String = match String::from_utf8(vec[start_index..start_index+value_len].to_vec()) {
+            Ok(s) => s,
+            Err(e) => return Err(RecordError::FailedFromBytes(e.to_string()))
+        };
         start_index += value_len;
 
         // value_len ~ 8バイトまでがタイムスタンプ
-        let timestamp: i64 = i64::from_be_bytes(
-            vec[start_index..start_index+8].to_vec().try_into().unwrap()
-        );
+        let timestamp: i64 = match vec[start_index..start_index+8].to_vec().try_into() {
+            Ok(bytes) => i64::from_be_bytes(bytes),
+            Err(_) => return Err(RecordError::FailedFromBytes("failed to convert timestamp".to_string()))
+        };
         start_index += 8;
 
         // 最後1バイトがtrue か false (1ならtrue)
-        let is_delete: bool = vec[start_index] == 1;
+        let is_delete: bool = match vec[start_index] {
+            0 => false,
+            1 => true,
+            _ => return Err(RecordError::FailedFromBytes(
+                format!("Invalid value '{}' is read. is_delete expect '0' or '1'", vec[start_index])
+            ))
+        };
 
-        Record { key, value, timestamp, is_delete }
+        Ok(Record { key, value, timestamp, is_delete })
     }
 }
 
@@ -74,7 +91,10 @@ impl Record {
 
 #[cfg(test)]
 mod tests {
-    use super::Record;
+    use crate::{
+        error::RecordError,
+        record::Record
+    };
     use chrono::Local;
 
     #[test]
@@ -126,6 +146,7 @@ mod tests {
 
     #[test]
     fn test_from_vec() {
+        // is_delete が true のケース
         let t = Record::new("key", "value", 0, true);
         let v: Vec<u8> = vec![
             0, 0, 0, 0, 0, 0, 0, 3,  // 3 (length of key)
@@ -135,8 +156,9 @@ mod tests {
             0, 0, 0, 0, 0, 0, 0, 0,  // timestamp
             1                        // true
         ];
-        assert_eq!(Record::from_vec(v), t);
+        assert_eq!(Record::from_vec(v).unwrap(), t);
 
+        // is_delete が false のケース
         let f = Record::new("key", "value", 0, false);
         let v: Vec<u8> = vec![
             0, 0, 0, 0, 0, 0, 0, 3,  // 3 (length of key)
@@ -146,6 +168,20 @@ mod tests {
             0, 0, 0, 0, 0, 0, 0, 0,  // timestamp
             0                        // false
         ];
-        assert_eq!(Record::from_vec(v), f);
+        assert_eq!(Record::from_vec(v).unwrap(), f);
+
+        // is_delete が true でも false でもない数値のケース(ERROR)
+        let e = RecordError::FailedFromBytes(
+            "Invalid value '2' is read. is_delete expect '0' or '1'".to_string()
+        );
+        let v: Vec<u8> = vec![
+            0, 0, 0, 0, 0, 0, 0, 3,  // 3 (length of key)
+            107, 101, 121,           // key
+            0, 0, 0, 0, 0, 0, 0, 5,  // 5 (length of value)
+            118, 97, 108, 117, 101,  // value
+            0, 0, 0, 0, 0, 0, 0, 0,  // timestamp
+            2                        // ERROR
+        ];
+        assert_eq!(Record::from_vec(v).unwrap_err(), e);
     }
 }

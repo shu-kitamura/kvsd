@@ -1,4 +1,5 @@
 mod record;
+mod error;
 
 use record::Record;
 // use chrono::Local;
