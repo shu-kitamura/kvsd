@@ -1,10 +1,9 @@
 use std::collections::HashMap;
 
-use crate::{keyvalue::{Value}, record::Record};
+use crate::value::Value;
 
 pub struct KVS {
-    memtable: HashMap<String, Value>,
-    memstore: Vec<Record>,
+    pub memtable: HashMap<String, Value>,
     limit: usize,
     data_dir: String,
 }
@@ -13,95 +12,39 @@ impl KVS {
     pub fn new() -> Self {
         KVS {
             memtable: HashMap::new(),
-            memstore: Vec::new(),
             limit: 1024,
             data_dir: "".to_string()
         }
     }
 
-    pub fn put(&mut self, key: &str, value: &str, timestamp: i64) {
-        let record: Record = Record::new(key, value, timestamp, false);
-        self.limit -= record.len();
-        self.memstore.push(record);
+    pub fn put(&mut self, key: &str, value: &str) {
+        self.memtable.insert(key.to_string(), Value::new(value, false));
 
-        if self.limit < 0 {
-            // flush
-        }
-
-    }
-
-    pub fn get(&mut self, key: &str) -> Option<Record> {
-        let contain_key_records = self.memstore.iter().filter(|r| r.key == key);
-        let newest_record = contain_key_records.max_by_key(|r|r.timestamp);
-        match newest_record {
-            Some(r) => Some(r.clone()),
-            None => None
+        if self.memtable.len() >= self.limit {
+            // flush 処理
         }
     }
 
-    pub fn delete(&mut self, key: &str, timestamp: i64) {
-        let record: Record = Record::new(key, "", timestamp, true);
-        self.limit = record.len();
-        self.memstore.push(record);
+    pub fn delete(&mut self, key: &str) {
+        self.memtable.insert(key.to_string(), Value::new("", true));
 
-        if self.limit < 0 {
-            // flush
+        if self.memtable.len() >= self.limit {
+            // flush 処理
+        }
+    }
+
+    pub fn get(&mut self, key: &str) -> Option<&Value> {
+        if let Some(v) =  self.memtable.get(key) {
+            // get で取得した value の is_delete が true ということは
+            // その value は削除されているので None を返す。
+            match v.is_delete {
+                true => None,
+                false => Some(v)
+            }
+        } else {
+            None
         }
     }
 }
+
 // ----- test -----
-
-#[cfg(test)]
-mod tests {
-    use std::vec;
-
-    use crate::{
-        record::Record,
-        kvsd::*
-    };
-    use chrono::Local;
-
-    #[test]
-    fn test_put() {
-        let ts = Local::now().timestamp();
-        let mut kvs: KVS = KVS::new();
-        kvs.put("key", "value", ts);
-
-        assert_eq!(
-            kvs.memstore.pop().unwrap(),
-            Record::new("key", "value", ts, false)
-        );
-    }
-
-    #[test]
-    fn test_get() {
-        let records = vec![
-            Record::new("key", "value", 1, false),
-            Record::new("key", "value", 10, false),
-            Record::new("key", "value", 100, false),
-        ];
-        let mut kvs: KVS = KVS {
-            memtable: HashMap::new(),
-            memstore: records,
-            limit: 1000,
-            data_dir: "".to_string()
-        };
-
-        assert_eq!(
-            kvs.get("key").unwrap(),
-            Record::new("key","value",100,false),
-        );
-    }
-
-    #[test]
-    fn test_delete() {
-        let ts = Local::now().timestamp();
-        let mut kvs = KVS::new();
-        kvs.delete("key", ts);
-
-        assert_eq!(
-            kvs.memstore.pop().unwrap(),
-            Record::new("key", "", ts, true)
-        );
-    }
-}

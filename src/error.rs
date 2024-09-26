@@ -1,19 +1,19 @@
 use std::{error::Error, fmt::{self, Display}};
 
 #[derive(Debug, PartialEq)]
-pub enum RecordError {
+pub enum ValueError {
     FailedFromBytes(String)
 }
 
-impl Display for RecordError {
+impl Display for ValueError {
     fn fmt (&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            RecordError::FailedFromBytes(msg) => write!(f, "RecordError : Following error is occured to convert bytes -> record.\n{msg}")
+            ValueError::FailedFromBytes(msg) => write!(f, "ValueError : Following error is occured to convert bytes -> Value.\n{msg}")
         }
     }
 }
 
-impl Error for RecordError {}
+impl Error for ValueError {}
 
 #[derive(Debug, PartialEq)]
 pub enum SSTableError {

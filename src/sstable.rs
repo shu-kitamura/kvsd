@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use crate::{error::SSTableError, record::Record};
+use crate::error::SSTableError;
 
 pub struct SSTable {
     data_path: PathBuf,
@@ -8,7 +8,7 @@ pub struct SSTable {
 }
 
 impl SSTable {
-    pub fn new(bytes: Vec<Record>, data_path: &str, index_path: &str) -> Result<Self, SSTableError> {
+    pub fn new(bytes: Vec<u8>, data_path: &str, index_path: &str) -> Result<Self, SSTableError> {
         let dp: PathBuf = PathBuf::from(data_path);
         let ip: PathBuf = PathBuf::from(index_path);
 
