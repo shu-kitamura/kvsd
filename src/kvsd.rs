@@ -5,7 +5,6 @@ use crate::value::Value;
 pub struct KVS {
     pub memtable: HashMap<String, Value>,
     limit: usize,
-    data_dir: String,
 }
 
 impl KVS {
@@ -13,7 +12,6 @@ impl KVS {
         KVS {
             memtable: HashMap::new(),
             limit: 1024,
-            data_dir: "".to_string()
         }
     }
 

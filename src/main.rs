@@ -12,7 +12,6 @@ fn main() {
 
     kvs.put("xxx", "xxxxx");
     println!("{:?}", kvs.get("xxx"));
-    println!("{:?}", kvs.get("key"));
 
     println!("{:?}", kvs.memtable)
 }
