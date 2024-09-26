@@ -17,7 +17,13 @@ impl KVS {
 
     pub fn put(&mut self, key: &str, value: &str, timestamp: i64) {
         let record: Record = Record::new(key, value, timestamp, false);
+        self.limit -= record.len();
         self.memstore.push(record);
+
+        if self.limit < 0 {
+            // flush
+        }
+
     }
 
     pub fn get(&mut self, key: &str) -> Option<Record> {
@@ -31,7 +37,13 @@ impl KVS {
 
     pub fn delete(&mut self, key: &str, timestamp: i64) {
         let record: Record = Record::new(key, "", timestamp, true);
+        self.limit = record.len();
         self.memstore.push(record);
+
+        if self.limit < 0 {
+            // flush
+        }
+
     }
 }
 // ----- test -----

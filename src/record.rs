@@ -18,8 +18,8 @@ impl Record {
         }
     }
 
-    pub fn len(self) -> usize {
-        self.to_vec().len()
+    pub fn len(&self) -> usize { 
+        self.key.len() + self.value.len() + 25
     }
 
     pub fn to_vec(self) -> Vec<u8> {
