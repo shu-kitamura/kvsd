@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
-use crate::{keyvalue::{Key, Value}, record::Record};
+use crate::{keyvalue::{Value}, record::Record};
 
 pub struct KVS {
-    memtable: HashMap<Key, Value>,
+    memtable: HashMap<String, Value>,
     memstore: Vec<Record>,
     limit: usize,
     data_dir: String,
