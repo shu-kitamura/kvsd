@@ -2,6 +2,7 @@ use crate::record::Record;
 
 pub struct KVS {
     memstore: Vec<Record>,
+    limit: usize,
     data_dir: String,
 }
 
@@ -9,6 +10,7 @@ impl KVS {
     pub fn new() -> Self {
         KVS {
             memstore: Vec::new(),
+            limit: 1000,
             data_dir: "".to_string()
         }
     }
@@ -65,6 +67,7 @@ mod tests {
         ];
         let mut kvs: KVS = KVS {
             memstore : records,
+            limit: 1000,
             data_dir: "".to_string()
         };
 

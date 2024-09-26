@@ -18,6 +18,10 @@ impl Record {
         }
     }
 
+    pub fn len(self) -> usize {
+        self.to_vec().len()
+    }
+
     pub fn to_vec(self) -> Vec<u8> {
         let key = self.key.as_bytes();
         let value = self.value.as_bytes();
@@ -121,6 +125,14 @@ mod tests {
         );
 
         assert_eq!(actual, expect);
+    }
+
+    #[test]
+    fn test_record_len() {
+        let r1 = Record::new("key", "value", 0, true);
+        assert_eq!(r1.len(), 33);
+        let r2 = Record::new("test_key", "test_value", 0, false);
+        assert_eq!(r2.len(), 43);
     }
 
     #[test]
