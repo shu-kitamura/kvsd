@@ -41,7 +41,9 @@ impl Record {
         // 8バイトまでがキーの長さ
         let key_len: usize = match vec[start_index..8].to_vec().try_into() {
                 Ok(bytes) => usize::from_be_bytes(bytes),
-                Err(_) => return Err(RecordError::FailedFromBytes("failed to convert key length".to_string()))
+                Err(v) => return Err(RecordError::FailedFromBytes(
+                    format!("failed to convert key length. To try the following vec to usize {:?}", v)
+                ))
             };
         start_index = 8;
 
@@ -55,7 +57,9 @@ impl Record {
         // key_len ~ 8バイトまでが値の長さ
         let value_len: usize = match vec[start_index..start_index+8].to_vec().try_into() {
             Ok(bytes) => usize::from_be_bytes(bytes),
-            Err(_) => return Err(RecordError::FailedFromBytes("failed to convert value length".to_string()))
+            Err(v) => return Err(RecordError::FailedFromBytes(
+                format!("failed to convert value length. To try the following vec to usize {:?}", v)
+            ))
         };
         start_index += 8;
 
@@ -69,7 +73,9 @@ impl Record {
         // value_len ~ 8バイトまでがタイムスタンプ
         let timestamp: i64 = match vec[start_index..start_index+8].to_vec().try_into() {
             Ok(bytes) => i64::from_be_bytes(bytes),
-            Err(_) => return Err(RecordError::FailedFromBytes("failed to convert timestamp".to_string()))
+            Err(v) => return Err(RecordError::FailedFromBytes(
+                format!("failed to convert timestamp. To try the following vec to i64 {:?}", v)
+            ))
         };
         start_index += 8;
 

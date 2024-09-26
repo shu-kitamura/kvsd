@@ -4,7 +4,9 @@ mod error;
 use record::Record;
 // use chrono::Local;
 
-fn main() {    
+fn main() {
+    let r = Record::new("k", "v", 0, true);
+    r.to_vec();
     let v: Vec<u8> = vec![
         0, 0, 0, 0, 0, 0, 0, 3,  // 3 (length of key)
         102, 97, 110,            // fat
