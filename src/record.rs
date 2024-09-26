@@ -1,10 +1,10 @@
 use crate::error::RecordError;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Record {
-    key: String,
+    pub key: String,
     value: String,
-    timestamp: i64,
+    pub timestamp: i64,
     is_delete: bool
 }
 
