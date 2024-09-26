@@ -1,6 +1,8 @@
 mod record;
 mod error;
 mod kvsd;
+mod sstable;
+mod keyvalue;
 
 use record::Record;
 // use chrono::Local;

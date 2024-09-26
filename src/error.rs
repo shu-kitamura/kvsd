@@ -1,4 +1,4 @@
-use std::fmt::{self, Display};
+use std::{error::Error, fmt::{self, Display}};
 
 #[derive(Debug, PartialEq)]
 pub enum RecordError {
@@ -12,3 +12,20 @@ impl Display for RecordError {
         }
     }
 }
+
+impl Error for RecordError {}
+
+#[derive(Debug, PartialEq)]
+pub enum SSTableError {
+    FailedCreate(String)
+}
+
+impl Display for SSTableError {
+    fn fmt (&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            SSTableError::FailedCreate(msg) => write!(f, "SSTableError : Failed to create SSTable because the following reason.\n{msg}")
+        }
+    }
+}
+
+impl Error for SSTableError {}

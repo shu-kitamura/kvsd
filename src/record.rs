@@ -1,5 +1,48 @@
 use crate::error::RecordError;
 
+struct Key {
+    key: String,
+    length: usize
+}
+
+impl Key {
+    fn new(string: &str) -> Self {
+        Key { key: string.to_string(), length: string.len() }
+    }
+
+    fn to_bytes(self) -> Vec<u8> {
+        let key = self.key.as_bytes();
+        let len = self.length.to_be_bytes();
+        [&len, key].concat()
+    }
+}
+
+struct Value {
+    value: String,
+    length: usize,
+    timestamp: i64,
+    is_delete: bool,
+}
+
+impl Value {
+    fn new(string: &str, ts:i64, is_del: bool) -> Self {
+        Value {
+            value: string.to_string(),
+            length: string.len(),
+            timestamp: ts,
+            is_delete: is_del,
+        }
+    }
+
+    fn to_bytes(self) -> Vec<u8> {
+        let value = self.value.as_bytes();
+        let value_len = self.length.to_be_bytes();
+        let timestamp = self.timestamp.to_be_bytes();
+        let is_del = u8::from(self.is_delete).to_be_bytes();
+        [&value_len, value, &timestamp, &is_del].concat()
+    }
+}
+ 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Record {
     pub key: String,

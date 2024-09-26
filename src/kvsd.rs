@@ -1,6 +1,9 @@
-use crate::record::Record;
+use std::collections::HashMap;
+
+use crate::{keyvalue::{Key, Value}, record::Record};
 
 pub struct KVS {
+    memtable: HashMap<Key, Value>,
     memstore: Vec<Record>,
     limit: usize,
     data_dir: String,
@@ -9,8 +12,9 @@ pub struct KVS {
 impl KVS {
     pub fn new() -> Self {
         KVS {
+            memtable: HashMap::new(),
             memstore: Vec::new(),
-            limit: 1000,
+            limit: 1024,
             data_dir: "".to_string()
         }
     }
@@ -43,7 +47,6 @@ impl KVS {
         if self.limit < 0 {
             // flush
         }
-
     }
 }
 // ----- test -----
@@ -78,7 +81,8 @@ mod tests {
             Record::new("key", "value", 100, false),
         ];
         let mut kvs: KVS = KVS {
-            memstore : records,
+            memtable: HashMap::new(),
+            memstore: records,
             limit: 1000,
             data_dir: "".to_string()
         };
