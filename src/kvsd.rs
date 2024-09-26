@@ -1,24 +1,37 @@
 use crate::record::Record;
 
-pub fn put(records: &mut Vec<Record>, key: &str, value: &str, timestamp: i64) {
-    let record: Record = Record::new(key, value, timestamp, false);
-    records.push(record);
+pub struct KVS {
+    memstore: Vec<Record>,
+    data_dir: String,
 }
 
-pub fn get(records: &mut Vec<Record>, key: &str) -> Option<Record> {
-    let contain_key_records = records.iter().filter(|r| r.key == key);
-    let newest_record = contain_key_records.max_by_key(|r|r.timestamp);
-    match newest_record {
-        Some(r) => Some(r.clone()),
-        None => None
+impl KVS {
+    pub fn new() -> Self {
+        KVS {
+            memstore: Vec::new(),
+            data_dir: "".to_string()
+        }
+    }
+
+    pub fn put(&mut self, key: &str, value: &str, timestamp: i64) {
+        let record: Record = Record::new(key, value, timestamp, false);
+        self.memstore.push(record);
+    }
+
+    pub fn get(&mut self, key: &str) -> Option<Record> {
+        let contain_key_records = self.memstore.iter().filter(|r| r.key == key);
+        let newest_record = contain_key_records.max_by_key(|r|r.timestamp);
+        match newest_record {
+            Some(r) => Some(r.clone()),
+            None => None
+        }
+    }
+
+    pub fn delete(&mut self, key: &str, timestamp: i64) {
+        let record: Record = Record::new(key, "", timestamp, true);
+        self.memstore.push(record);
     }
 }
-
-pub fn delete(records: &mut Vec<Record>, key: &str, timestamp: i64) {
-    let record: Record = Record::new(key, "", timestamp, true);
-    records.push(record);
-}
-
 // ----- test -----
 
 #[cfg(test)]
@@ -34,25 +47,29 @@ mod tests {
     #[test]
     fn test_put() {
         let ts = Local::now().timestamp();
-        let mut records: Vec<Record> = Vec::new();
-        put(&mut records, "key", "value", ts);
+        let mut kvs: KVS = KVS::new();
+        kvs.put("key", "value", ts);
 
         assert_eq!(
-            records.pop().unwrap(),
+            kvs.memstore.pop().unwrap(),
             Record::new("key", "value", ts, false)
         );
     }
 
     #[test]
     fn test_get() {
-        let mut records = vec![
+        let records = vec![
             Record::new("key", "value", 1, false),
             Record::new("key", "value", 10, false),
             Record::new("key", "value", 100, false),
         ];
+        let mut kvs: KVS = KVS {
+            memstore : records,
+            data_dir: "".to_string()
+        };
 
         assert_eq!(
-            get(&mut records, "key").unwrap(),
+            kvs.get("key").unwrap(),
             Record::new("key","value",100,false),
         );
     }
@@ -60,11 +77,11 @@ mod tests {
     #[test]
     fn test_delete() {
         let ts = Local::now().timestamp();
-        let mut records: Vec<Record> = Vec::new();
-        delete(&mut records, "key", ts);
+        let mut kvs = KVS::new();
+        kvs.delete("key", ts);
 
         assert_eq!(
-            records.pop().unwrap(),
+            kvs.memstore.pop().unwrap(),
             Record::new("key", "", ts, true)
         );
     }
