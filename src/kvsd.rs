@@ -1,16 +1,15 @@
-use std::collections::HashMap;
-
+use std::collections::BTreeMap;
 use crate::value::Value;
 
 pub struct KVS {
-    pub memtable: HashMap<String, Value>,
+    pub memtable: BTreeMap<String, Value>,
     limit: usize,
 }
 
 impl KVS {
     pub fn new() -> Self {
         KVS {
-            memtable: HashMap::new(),
+            memtable: BTreeMap::new(),
             limit: 1024,
         }
     }
@@ -19,7 +18,7 @@ impl KVS {
         self.memtable.insert(key.to_string(), Value::new(value, false));
 
         if self.memtable.len() >= self.limit {
-            // flush 処理
+            self.flush();
         }
     }
 
@@ -27,7 +26,7 @@ impl KVS {
         self.memtable.insert(key.to_string(), Value::new("", true));
 
         if self.memtable.len() >= self.limit {
-            // flush 処理
+            self.flush();
         }
     }
 
@@ -43,6 +42,19 @@ impl KVS {
             None
         }
     }
+
+    pub fn flush(&mut self) {
+        for (k, v) in self.memtable.iter() {
+            let key_bytes: Vec<u8> = [&k.len().to_be_bytes(), k.as_bytes()].concat();
+            let value_bytes: Vec<u8> = v.clone().to_bytes();
+            let bytes: Vec<u8> = [key_bytes, value_bytes].concat();
+
+            // SSTable に write する処理
+            // unimplemented!();
+        }
+
+        self.memtable.clear();
+    }    
 }
 
 // ----- test -----

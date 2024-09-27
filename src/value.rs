@@ -1,6 +1,6 @@
 use crate::error::ValueError;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Value {
     value: String,
     length: usize,
