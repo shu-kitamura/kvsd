@@ -5,9 +5,12 @@ use std::{
 };
 
 use crate::{
-    error::IOError, file_io::write_key_value, value::Value
+    error::IOError,
+    file_io::write_key_value,
+    value::Value
 };
 
+#[derive(Debug, PartialEq)]
 pub struct WriteAheadLog {
     path: PathBuf,
 }
@@ -18,7 +21,7 @@ impl WriteAheadLog {
         path.push(filename);
 
         WriteAheadLog {
-            path,
+            path
         }
     }
 
@@ -48,5 +51,21 @@ impl WriteAheadLog {
                 )
             }
         }
+    }
+}
+
+// ----- test -----
+
+#[cfg(test)]
+mod tests {
+    use crate::wal::*;
+
+    #[test]
+    fn test_wal_new() {
+        let path: PathBuf = PathBuf::from("test");
+        let wal = WriteAheadLog {
+            path: PathBuf::from("test/wal")
+        };
+        assert_eq!(WriteAheadLog::new(&path, "wal"), wal);
     }
 }

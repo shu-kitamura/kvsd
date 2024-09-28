@@ -3,26 +3,28 @@ use crate::error::ValueError;
 #[derive(Debug, PartialEq, Clone)]
 pub struct Value {
     value: String,
-    length: usize,
-    pub is_delete: bool,
+    is_delete: bool,
 }
 
 impl Value {
     pub fn new(string: &str, is_del: bool) -> Self {
         Value {
             value: string.to_string(),
-            length: string.len(),
             is_delete: is_del,
         }
     }
 
     pub fn len(&self) -> usize {
-        self.length + 9
+        self.value.len() + 9
+    }
+
+    pub fn is_deleted(&self) -> bool {
+        self.is_delete
     }
 
     pub fn to_bytes(self) -> Vec<u8> {
         let value = self.value.as_bytes();
-        let value_len = self.length.to_be_bytes();
+        let value_len = self.value.len().to_be_bytes();
         let is_del = u8::from(self.is_delete).to_be_bytes();
         [&value_len, value, &is_del].concat()
     }
@@ -55,7 +57,7 @@ impl Value {
             ))
         };
 
-        Ok(Value { value, length, is_delete })
+        Ok(Value { value, is_delete })
 
     }
 }
@@ -70,14 +72,12 @@ mod tests {
     fn test_value_new() {
         let t = Value {
             value: "value".to_string(),
-            length: 5,
             is_delete: true
         };
         assert_eq!(Value::new("value", true), t);
 
         let f = Value {
             value: "value".to_string(),
-            length: 5,
             is_delete: false
         };
         assert_eq!(Value::new("value", false), f);
@@ -87,6 +87,15 @@ mod tests {
     fn test_len() {
         let value = Value::new("value", false);
         assert_eq!(value.len(), 14);
+    }
+
+    #[test]
+    fn test_is_deleted() {
+        let t = Value::new("v", true);
+        assert_eq!(t.is_deleted(), true);
+        
+        let f = Value::new("v", false);
+        assert_eq!(f.is_deleted(), false);
     }
 
     #[test]

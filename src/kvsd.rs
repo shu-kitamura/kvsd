@@ -48,7 +48,7 @@ impl KVS {
         if let Some(v) =  self.memtable.get(key) {
             // get で取得した value の is_delete が true の場合、
             // その value は削除されているので None を返す。
-            match v.is_delete {
+            match v.is_deleted() {
                 true => None,
                 false => Some(v)
             }
@@ -84,6 +84,8 @@ impl KVS {
     }
 }
 
-
+fn row_len(key: String, value: Value) -> usize {
+    key.len() + value.len() + 8
+}
 
 // ----- test -----
