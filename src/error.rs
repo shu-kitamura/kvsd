@@ -23,9 +23,28 @@ pub enum SSTableError {
 impl Display for SSTableError {
     fn fmt (&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            SSTableError::FailedCreate(msg) => write!(f, "SSTableError : Failed to create SSTable because the following reason.\n{msg}")
+            SSTableError::FailedCreate(msg) => write!(f, "SSTableError: Failed to create SSTable because the following reason.\n{msg}")
         }
     }
 }
 
 impl Error for SSTableError {}
+
+#[derive(Debug, PartialEq)]
+pub enum IOError {
+    FailedWriteBytes(String),
+    FailedOpenFile(String, String),
+    FailedTruncateWAL(String),
+}
+
+impl Display for IOError {
+    fn fmt (&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            IOError::FailedWriteBytes(msg) => write!(f, "IOError: Failed to write bytes because the following error is occured.\n{msg}"),
+            IOError::FailedOpenFile(path, msg) => write!(f, "IOError: Failed to open '{path}' because the following error is occurd.\n{msg}"),
+            IOError::FailedTruncateWAL(msg) => write!(f, "IOError: Failed to trancate WAL because the following error is occured.\n{msg}"),
+        }
+    }
+}
+
+impl Error for IOError {}

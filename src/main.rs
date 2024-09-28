@@ -1,9 +1,14 @@
+use std::path::PathBuf;
+
 use kvsd::KVS;
+use sstable::SSTable;
 
 mod error;
 mod kvsd;
 mod sstable;
 mod value;
+mod wal;
+mod file_io;
 
 fn main() {
     let mut kvs = KVS::new();
@@ -18,6 +23,10 @@ fn main() {
     kvs.put("k9", "value");
     kvs.put("k7", "value");
 
-    kvs.flush();
-    println!("{:?}", kvs.memtable);
+    // kvs.flush();
+    // println!("{:?}", kvs.memtable);
+
+    let path = PathBuf::from("./data/");
+    let sstab = SSTable::create(&path, &kvs.memtable).unwrap();
+    println!("{:?}", sstab);
 }

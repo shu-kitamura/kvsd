@@ -1,38 +1,52 @@
-use std::collections::BTreeMap;
-use crate::value::Value;
+use std::{
+    collections::BTreeMap,
+    path::PathBuf
+};
+
+use crate::{
+    value::Value,
+    sstable::SSTable,
+    wal::WriteAheadLog,
+};
 
 pub struct KVS {
     pub memtable: BTreeMap<String, Value>,
     limit: usize,
+    data_dir: PathBuf,
+    wal: WriteAheadLog,
+    sstables: Vec<SSTable>
 }
 
 impl KVS {
     pub fn new() -> Self {
+        let data_dir: PathBuf = PathBuf::from("./data/");
+        if !data_dir.is_dir() {
+            // ディレクトリが無い or ファイルではない というエラーを出したい
+            unimplemented!()
+        }
+        let wal = WriteAheadLog::new(&data_dir, "wal.dat");
         KVS {
             memtable: BTreeMap::new(),
             limit: 1024,
+            wal, 
+            data_dir,
+            sstables: Vec::new()
         }
     }
 
-    pub fn put(&mut self, key: &str, value: &str) {
-        self.memtable.insert(key.to_string(), Value::new(value, false));
-
-        if self.memtable.len() >= self.limit {
-            self.flush();
-        }
+    pub fn put(&mut self, k: &str, v: &str) {
+        let value: Value =  Value::new(v, false);
+        self.put_key_value(k, value);
     }
 
-    pub fn delete(&mut self, key: &str) {
-        self.memtable.insert(key.to_string(), Value::new("", true));
-
-        if self.memtable.len() >= self.limit {
-            self.flush();
-        }
+    pub fn delete(&mut self, k: &str) {
+        let value = Value::new("", true);
+        self.put_key_value(k, value);
     }
 
     pub fn get(&mut self, key: &str) -> Option<&Value> {
         if let Some(v) =  self.memtable.get(key) {
-            // get で取得した value の is_delete が true ということは
+            // get で取得した value の is_delete が true の場合、
             // その value は削除されているので None を返す。
             match v.is_delete {
                 true => None,
@@ -43,18 +57,33 @@ impl KVS {
         }
     }
 
-    pub fn flush(&mut self) {
-        for (k, v) in self.memtable.iter() {
-            let key_bytes: Vec<u8> = [&k.len().to_be_bytes(), k.as_bytes()].concat();
-            let value_bytes: Vec<u8> = v.clone().to_bytes();
-            let bytes: Vec<u8> = [key_bytes, value_bytes].concat();
+    fn put_key_value(&mut self, key: &str, value: Value) {
+        let writed_size = match self.wal.write(key, &value) {
+            Ok(size) => size,
+            Err(e) => unimplemented!()
+        };
+        self.memtable.insert(key.to_string(), value);
 
-            // SSTable に write する処理
-            // unimplemented!();
+        if self.limit >= writed_size {
+            self.limit -= writed_size
+        } else {
+            self.flush()
         }
+    }
 
-        self.memtable.clear();
-    }    
+    pub fn flush(&mut self) {
+        match SSTable::create(&self.data_dir, &self.memtable){
+            Ok(sst) => self.sstables.push(sst),
+            Err(e) => unimplemented!()
+        };
+
+        match self.wal.clear() {
+            Ok(_) => self.memtable.clear(),
+            Err(e) => unimplemented!()
+        };
+    }
 }
+
+
 
 // ----- test -----
