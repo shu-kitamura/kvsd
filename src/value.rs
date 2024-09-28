@@ -24,36 +24,25 @@ impl Value {
 
     pub fn to_bytes(self) -> Vec<u8> {
         let value = self.value.as_bytes();
-        let value_len = self.value.len().to_be_bytes();
+        let value_len = (self.value.len()+1).to_be_bytes();
         let is_del = u8::from(self.is_delete).to_be_bytes();
         [&value_len, value, &is_del].concat()
     }
 
     pub fn from_bytes(bytes: Vec<u8>) -> Result<Self, ValueError> {
-        let mut start_index: usize = 0;
-
-        // 8バイトまでが value の長さ
-        let length: usize = match bytes[start_index..8].to_vec().try_into() {
-                Ok(bytes) => usize::from_be_bytes(bytes),
-                Err(v) => return Err(ValueError::FailedFromBytes(
-                    format!("failed to convert value length. To try the following vec to usize {:?}", v)
-                ))
-            };
-        start_index = 8;
-
-        // 8 ~ length バイトまでが value 本体
-        let value: String = match String::from_utf8(bytes[start_index..start_index+length].to_vec()){
+        println!("{:?}", bytes);
+        // 0 ~ length-1 までが value 本体
+        let value: String = match String::from_utf8(bytes[0..bytes.len()-1].to_vec()){
             Ok(s) => s,
             Err(e) => return Err(ValueError::FailedFromBytes(e.to_string()))
         };
-        start_index += length;
 
         // 最後1バイトがtrue か false (1ならtrue)
-        let is_delete: bool = match bytes[start_index] {
+        let is_delete: bool = match bytes[bytes.len()-1] {
             0 => false,
             1 => true,
             _ => return Err(ValueError::FailedFromBytes(
-                format!("Invalid value '{}' is read. is_delete expect '0' or '1'", bytes[start_index])
+                format!("Invalid value '{}' is read. is_delete expect '0' or '1'", bytes[bytes.len()-1])
             ))
         };
 
@@ -120,11 +109,11 @@ mod tests {
     #[test]
     fn test_from_bytes() {
         let t = Value::new("test", true);
-        let bytes: Vec<u8> = vec![0, 0, 0, 0, 0, 0, 0, 4, 116, 101, 115, 116, 1];
+        let bytes: Vec<u8> = vec![116, 101, 115, 116, 1];
         assert_eq!(Value::from_bytes(bytes).unwrap(), t);
 
         let f = Value::new("test", false);
-        let bytes: Vec<u8> = vec![0, 0, 0, 0, 0, 0, 0, 4, 116, 101, 115, 116, 0];
+        let bytes: Vec<u8> = vec![116, 101, 115, 116, 0];
         assert_eq!(Value::from_bytes(bytes).unwrap(), f);
         
     }
