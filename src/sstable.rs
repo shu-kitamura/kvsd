@@ -1,6 +1,6 @@
-use std::{collections::{BTreeMap, HashMap}, error::Error, fs::File, io::{BufReader, BufWriter}, path::PathBuf};
+use std::{collections::{BTreeMap, HashMap}, fs::File, io::{BufReader, BufWriter}, path::PathBuf};
 
-use crate::{error::SSTableError, file_io::{read_key_value, write_index, write_key_value}, value::Value};
+use crate::{error::{IOError, SSTableError}, file_io::{read_key_value, write_index, write_key_value}, value::Value};
 
 #[derive(Debug)]
 pub struct SSTable {
@@ -10,10 +10,8 @@ pub struct SSTable {
 }
 
 impl SSTable {
-    pub fn create(data_dir: &PathBuf, memtable: &BTreeMap<String, Value>) -> Result<Self, SSTableError> {
-        let filename = "sstab";
-
-        let mut data_path = data_dir.clone();
+    pub fn create(data_dir: &PathBuf, memtable: &BTreeMap<String, Value>, filename: &str) -> Result<Self, IOError> {
+        let mut data_path: PathBuf = data_dir.clone();
         data_path.push(format!("{}.dat", filename));
         let mut data_writer: BufWriter<File> = match get_bufreader(&data_path) {
             Ok(bw) => bw,
@@ -21,24 +19,23 @@ impl SSTable {
         };
 
 
-        let mut index_path = data_dir.clone();
+        let mut index_path: PathBuf = data_dir.clone();
         index_path.push(format!("{}.idx", filename));
         let mut index_writer = match get_bufreader(&index_path) {
             Ok(bw) => bw,
             Err(e) => return Err(e)
         };
 
-        let mut index = HashMap::new();
+        let mut index: HashMap<String, usize> = HashMap::new();
         let mut pointer: usize = 0;
         for (k, v) in memtable.iter() {
-            match write_index(&mut index_writer, k, pointer) {
-                Ok(_) => {},
-                Err(e) => unimplemented!()
+            if let Err(e) = write_index(&mut index_writer, k, pointer) {
+                return Err(e)
             }
             index.insert(k.to_string(), pointer);
             pointer += match write_key_value(&mut data_writer, k, v) {
                 Ok(size) => size,
-                Err(e) => unimplemented!()
+                Err(e) => return Err(e)
             };
         }
 
@@ -49,27 +46,29 @@ impl SSTable {
         })
     }
 
-    pub fn get(&self, key: &str) -> Option<Value> {
+    pub fn get(&self, key: &str) -> Result<Option<Value>, IOError> {
         let pointer = match self.index.get(key) {
             Some(p) => *p,
-            None => return None
+            None => return Ok(None)
         };
 
         let file = match File::open(self.data_path.clone()) {
             Ok(f) => f,
-            Err(e) => unimplemented!()
+            Err(e) => return Err(IOError::FailedOpenFile(self.data_path.clone(), e.to_string()))
         };
-        let mut buf_reader = BufReader::new(file);
+        let mut buf_reader: BufReader<File> = BufReader::new(file);
 
         let (_, value) = read_key_value(&mut buf_reader, pointer);
 
-        Some(value)
+        Ok(Some(value))
     }
 }
 
-fn get_bufreader(path: &PathBuf) -> Result<BufWriter<File>, SSTableError> {
+fn get_bufreader(path: &PathBuf) -> Result<BufWriter<File>, IOError> {
     match File::create(path) {
         Ok(f) => Ok(BufWriter::new(f)),
-        Err(e) => unimplemented!()
-    }
+        Err(e) => return Err(
+            IOError::FailedCreateFile(path.clone(), e.to_string())
+        )
+}
 }

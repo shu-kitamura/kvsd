@@ -1,9 +1,9 @@
 use std::{
-    borrow::Borrow, collections::BTreeMap, path::PathBuf
+    collections::BTreeMap, path::PathBuf
 };
 
 use crate::{
-    sstable::{self, SSTable}, value::Value, wal::WriteAheadLog
+    error::IOError, sstable::SSTable, value::Value, wal::WriteAheadLog
 };
 
 pub struct KVS {
@@ -21,7 +21,7 @@ impl KVS {
             // ディレクトリが無い or ファイルではない というエラーを出したい
             unimplemented!()
         }
-        let wal = WriteAheadLog::new(&data_dir, "wal.dat");
+        let wal = WriteAheadLog::new(&data_dir, "wal");
         KVS {
             memtable: BTreeMap::new(),
             limit: 1024,
@@ -31,70 +31,83 @@ impl KVS {
         }
     }
 
-    pub fn put(&mut self, k: &str, v: &str) {
+    pub fn put(&mut self, k: &str, v: &str) -> Result<(), IOError> {
         let value: Value =  Value::new(v, false);
-        self.put_key_value(k, value);
+        self.put_key_value(k, value)
     }
 
-    pub fn delete(&mut self, k: &str) {
+    pub fn delete(&mut self, k: &str) -> Result<(), IOError> {
         let value = Value::new("", true);
-        self.put_key_value(k, value);
+        self.put_key_value(k, value)
     }
 
-    fn put_key_value(&mut self, key: &str, value: Value) {
+    fn put_key_value(&mut self, key: &str, value: Value) -> Result<(), IOError> {
         let writed_size = match self.wal.write(key, &value) {
             Ok(size) => size,
-            Err(e) => unimplemented!()
+            Err(e) => return Err(e)
         };
         self.memtable.insert(key.to_string(), value);
 
         if self.limit >= writed_size {
             self.limit -= writed_size
         } else {
-            self.flush()
+            if let Err(e) = self.flush() {
+                return Err(e)
+            }
         }
+
+        Ok(())
     }
     
-    pub fn get(&mut self, key: &str) -> Option<Value> {
-        if let Some(v) =  self.memtable.get(key) {
-            // get で取得した value の is_delete が true の場合、
-            // その value は削除されているので None を返す。
-            return match v.is_deleted() {
-                true => None,
-                false => Some(v.clone())
+    pub fn get(&mut self, key: &str) -> Result<Option<Value>, IOError> {
+        // memtable からの取得。
+        // 取得した value の is_deleted が true の場合、
+        // その value は削除されているので None を返す。
+        if let Some(value) =  self.memtable.get(key) {
+            return match value.is_deleted() {
+                true => Ok(None),
+                false => Ok(Some(value.clone()))
             }
         }
 
-        if let Some(v) = self.get_from_sstable(key) {
-            return match v.is_deleted() {
-                    true => None,
-                    false => Some(v)
+        // sstable からの取得。
+        // memtable と同じく is_deleted が true の場合、None を返す。
+        match self.get_from_sstable(key) {
+            Ok(option) => if let Some(value) = option {
+                return match value.is_deleted() {
+                    true => Ok(None),
+                    false => Ok(Some(value))
+                }
             }
+            Err(e) => return Err(e)
         }
 
-        None
+        Ok(None)
     }
 
-    fn get_from_sstable(&mut self, key: &str) -> Option<Value> {
+    fn get_from_sstable(&mut self, key: &str) -> Result<Option<Value>, IOError> {
         for sstable in self.sstables.iter() {
             match sstable.get(key) {
-                Some(v) => return Some(v),
-                None => continue,
+                Ok(value) => return Ok(value),
+                Err(e) => return Err(e)
             }
         }
-        None
+        Ok(None)
     }
 
-    pub fn flush(&mut self) {
-        match SSTable::create(&self.data_dir, &self.memtable){
+    pub fn flush(&mut self) -> Result<(), IOError>{
+        let timestamp = chrono::Local::now().timestamp();
+        match SSTable::create(&self.data_dir, &self.memtable, &timestamp.to_string()) {
             Ok(sst) => self.sstables.push(sst),
-            Err(e) => unimplemented!()
+            Err(e) => return Err(e)
         };
 
         match self.wal.clear() {
             Ok(_) => self.memtable.clear(),
-            Err(e) => unimplemented!()
+            Err(e) => return Err(e)
         };
+
+        Ok(())
     }
 }
 

@@ -1,5 +1,6 @@
-use std::{fs::File, io::BufReader, path::PathBuf};
+use std::{fs::{self, File}, io::BufReader, path::PathBuf};
 
+use chrono::TimeZone;
 use kvsd::KVS;
 use sstable::SSTable;
 use file_io::read_key_value;
@@ -25,11 +26,18 @@ fn main() {
     kvs.put("k7", "value7");
 
     kvs.wal.recovery();
-    // kvs.flush();
+    kvs.flush();
     // println!("{:?}", kvs.get("k5"));
     // println!("{:?}", kvs.get("k1"));
-    // println!("{:?}", kvs.get("k999"));
+    // println!("{:?}", kvs.get("k999"));]
 
+    let data_dir: PathBuf = PathBuf::from("./data/");
+    let files = fs::read_dir(data_dir).unwrap();
+    for file in files {
+        if let Ok(f) = file {
+            println!("{:?}", f.path())
+        }
+    }
 }
 
 fn row_len(key: String, value: crate::value::Value) -> usize {
