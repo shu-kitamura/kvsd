@@ -1,20 +1,17 @@
 use std::{
-    collections::BTreeMap,
-    path::PathBuf
+    borrow::Borrow, collections::BTreeMap, path::PathBuf
 };
 
 use crate::{
-    value::Value,
-    sstable::SSTable,
-    wal::WriteAheadLog,
+    sstable::{self, SSTable}, value::Value, wal::WriteAheadLog
 };
 
 pub struct KVS {
     pub memtable: BTreeMap<String, Value>,
     limit: usize,
     data_dir: PathBuf,
-    wal: WriteAheadLog,
-    sstables: Vec<SSTable>
+    pub wal: WriteAheadLog,
+    pub sstables: Vec<SSTable>
 }
 
 impl KVS {
@@ -44,19 +41,6 @@ impl KVS {
         self.put_key_value(k, value);
     }
 
-    pub fn get(&mut self, key: &str) -> Option<&Value> {
-        if let Some(v) =  self.memtable.get(key) {
-            // get で取得した value の is_delete が true の場合、
-            // その value は削除されているので None を返す。
-            match v.is_deleted() {
-                true => None,
-                false => Some(v)
-            }
-        } else {
-            None
-        }
-    }
-
     fn put_key_value(&mut self, key: &str, value: Value) {
         let writed_size = match self.wal.write(key, &value) {
             Ok(size) => size,
@@ -69,6 +53,36 @@ impl KVS {
         } else {
             self.flush()
         }
+    }
+    
+    pub fn get(&mut self, key: &str) -> Option<Value> {
+        if let Some(v) =  self.memtable.get(key) {
+            // get で取得した value の is_delete が true の場合、
+            // その value は削除されているので None を返す。
+            return match v.is_deleted() {
+                true => None,
+                false => Some(v.clone())
+            }
+        }
+
+        if let Some(v) = self.get_from_sstable(key) {
+            return match v.is_deleted() {
+                    true => None,
+                    false => Some(v)
+            }
+        }
+
+        None
+    }
+
+    fn get_from_sstable(&mut self, key: &str) -> Option<Value> {
+        for sstable in self.sstables.iter() {
+            match sstable.get(key) {
+                Some(v) => return Some(v),
+                None => continue,
+            }
+        }
+        None
     }
 
     pub fn flush(&mut self) {

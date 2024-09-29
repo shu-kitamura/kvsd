@@ -1,6 +1,6 @@
-use std::{collections::{BTreeMap, HashMap}, error::Error, fs::File, io::BufWriter, path::PathBuf};
+use std::{collections::{BTreeMap, HashMap}, error::Error, fs::File, io::{BufReader, BufWriter}, path::PathBuf};
 
-use crate::{error::SSTableError, value::Value, file_io::{write_index, write_key_value}};
+use crate::{error::SSTableError, file_io::{read_key_value, write_index, write_key_value}, value::Value};
 
 #[derive(Debug)]
 pub struct SSTable {
@@ -47,6 +47,23 @@ impl SSTable {
             index_path: index_path,
             index: index
         })
+    }
+
+    pub fn get(&self, key: &str) -> Option<Value> {
+        let pointer = match self.index.get(key) {
+            Some(p) => *p,
+            None => return None
+        };
+
+        let file = match File::open(self.data_path.clone()) {
+            Ok(f) => f,
+            Err(e) => unimplemented!()
+        };
+        let mut buf_reader = BufReader::new(file);
+
+        let (_, value) = read_key_value(&mut buf_reader, pointer);
+
+        Some(value)
     }
 }
 

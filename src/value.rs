@@ -30,7 +30,6 @@ impl Value {
     }
 
     pub fn from_bytes(bytes: Vec<u8>) -> Result<Self, ValueError> {
-        println!("{:?}", bytes);
         // 0 ~ length-1 までが value 本体
         let value: String = match String::from_utf8(bytes[0..bytes.len()-1].to_vec()){
             Ok(s) => s,
