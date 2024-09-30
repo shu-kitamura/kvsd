@@ -1,4 +1,6 @@
-use crate::error::ValueError;
+use std::fmt::{self, Display};
+
+use crate::error::ConvertError;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Value {
@@ -29,24 +31,30 @@ impl Value {
         [&value_len, value, &is_del].concat()
     }
 
-    pub fn from_bytes(bytes: Vec<u8>) -> Result<Self, ValueError> {
+    pub fn from_bytes(bytes: Vec<u8>) -> Result<Self, ConvertError> {
         // 0 ~ length-1 までが value 本体
         let value: String = match String::from_utf8(bytes[0..bytes.len()-1].to_vec()){
             Ok(s) => s,
-            Err(e) => return Err(ValueError::FailedFromBytes(e.to_string()))
+            Err(e) => return Err(ConvertError::FailedBytesToValue(e.to_string()))
         };
 
         // 最後1バイトがtrue か false (1ならtrue)
         let is_delete: bool = match bytes[bytes.len()-1] {
             0 => false,
             1 => true,
-            _ => return Err(ValueError::FailedFromBytes(
+            _ => return Err(ConvertError::FailedBytesToValue(
                 format!("Invalid value '{}' is read. is_delete expect '0' or '1'", bytes[bytes.len()-1])
             ))
         };
 
         Ok(Value { value, is_delete })
 
+    }
+}
+
+impl Display for Value {
+    fn fmt (&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.value)
     }
 }
 
@@ -89,7 +97,7 @@ mod tests {
     #[test]
     fn test_to_bytes() {
         let v: Vec<u8> = vec![
-            0, 0, 0, 0, 0, 0, 0, 5,  // 5 (length of value)
+            0, 0, 0, 0, 0, 0, 0, 6,  // 6 (length of value)
             118, 97, 108, 117, 101,  // value
             1                        // true
         ];
@@ -97,7 +105,7 @@ mod tests {
         assert_eq!(t.to_bytes(), v);
 
         let v: Vec<u8> = vec![
-            0, 0, 0, 0, 0, 0, 0, 5,  // 5 (length of value)
+            0, 0, 0, 0, 0, 0, 0, 6,  // 6 (length of value)
             118, 97, 108, 117, 101,  // value
             0                        // false
         ];
@@ -114,6 +122,16 @@ mod tests {
         let f = Value::new("test", false);
         let bytes: Vec<u8> = vec![116, 101, 115, 116, 0];
         assert_eq!(Value::from_bytes(bytes).unwrap(), f);
-        
+    }
+
+    #[test]
+    fn test_display() {
+        let str_true = "test_true";
+        let t = Value::new(&str_true, true);
+        assert_eq!(format!("{t}"), String::from(str_true));
+
+        let str_false = "test_false";
+        let f = Value::new(&str_false, true);
+        assert_eq!(format!("{f}"), String::from(str_false));
     }
 }

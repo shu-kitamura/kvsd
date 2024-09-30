@@ -4,6 +4,7 @@ use chrono::TimeZone;
 use kvsd::KVS;
 use sstable::SSTable;
 use file_io::read_key_value;
+use value::Value;
 
 mod error;
 mod kvsd;
@@ -26,18 +27,25 @@ fn main() {
     kvs.put("k7", "value7");
 
     kvs.wal.recovery();
-    kvs.flush();
-    // println!("{:?}", kvs.get("k5"));
-    // println!("{:?}", kvs.get("k1"));
-    // println!("{:?}", kvs.get("k999"));]
+    println!("{:?}", kvs.memtable);
+    // kvs.flush();
+    // // println!("{:?}", kvs.get("k5"));
+    // // println!("{:?}", kvs.get("k1"));
+    // // println!("{:?}", kvs.get("k999"));]
 
-    let data_dir: PathBuf = PathBuf::from("./data/");
-    let files = fs::read_dir(data_dir).unwrap();
-    for file in files {
-        if let Ok(f) = file {
-            println!("{:?}", f.path())
-        }
-    }
+    // let data_dir: PathBuf = PathBuf::from("./data/");
+    // let files = fs::read_dir(data_dir).unwrap();
+    // for file in files {
+    //     if let Ok(f) = file {
+    //         println!("{:?}", f.path())
+    //     }
+    // }
+
+    let jp = Value::new("Japan", false);
+    let us = Value::new("USA", false);
+
+    println!("{jp}");
+    println!("{us}");
 }
 
 fn row_len(key: String, value: crate::value::Value) -> usize {

@@ -14,19 +14,19 @@ pub struct WriteAheadLog {
 }
 
 impl WriteAheadLog {
-    pub fn new(data_dir: &PathBuf, filename: &str) -> Self {
+    pub fn new(data_dir: &PathBuf, filename: &str) -> Result<Self, IOError> {
         let mut path: PathBuf = data_dir.clone();
         path.push(filename);
 
         if !path.exists() {
             if let Err(e) = File::create(&path) {
-                unimplemented!()
-            };
+                return Err(IOError::FailedCreateFile(path, e.to_string()))
+            }
         }
 
-        WriteAheadLog {
+        Ok(WriteAheadLog {
             path
-        }
+        })
     }
 
     pub fn write(&mut self, key: &str, value: &Value) -> Result<usize, IOError> {
@@ -61,15 +61,31 @@ impl WriteAheadLog {
 
         let file_size: usize = match fs::metadata(&self.path) {
             Ok(metadata) => metadata.len() as usize,
-            Err(e) => unimplemented!()
+            Err(e) => return Err(
+                IOError::FailedGetFileSize(self.path.clone(), e.to_string())
+            )
         };
 
         let mut offset: usize = 0;
         let mut btm: BTreeMap<String, Value> = BTreeMap::new();
         while offset < file_size {
-            let (k, v) = read_key_value(&mut buf_reader, offset);
-            offset += k.len() + v.len() + 9;
-            btm.insert(k, v);
+            let (key_bytes, value_bytes) = match read_key_value(&mut buf_reader, offset) {
+                Ok(kv) => kv,
+                Err(e) => return Err(e)
+            };
+
+            let key = match String::from_utf8(key_bytes) {
+                Ok(s) => s,
+                Err(e) => unimplemented!()
+            };
+
+            let value = match Value::from_bytes(value_bytes) {
+                Ok(v) => v,
+                Err(e) => unimplemented!()
+            };
+
+            offset += key.len() + value.len() + 9;
+            btm.insert(key, value);
         }
 
         Ok(btm)
@@ -84,10 +100,10 @@ mod tests {
 
     #[test]
     fn test_wal_new() {
-        let path: PathBuf = PathBuf::from("test");
+        let path: PathBuf = PathBuf::from("data");
         let wal = WriteAheadLog {
-            path: PathBuf::from("test/wal")
+            path: PathBuf::from("data/wal")
         };
-        assert_eq!(WriteAheadLog::new(&path, "wal"), wal);
+        assert_eq!(WriteAheadLog::new(&path, "wal").unwrap(), wal);
     }
 }

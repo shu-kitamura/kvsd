@@ -1,6 +1,5 @@
 use std::{
-    fs::File,
-    io::{BufReader, BufWriter, Read, Seek, Write},
+    collections::HashMap, fs::File, io::{BufReader, BufWriter, Read, Seek, Write}
 };
 use crate::{
     error::IOError,
@@ -28,63 +27,66 @@ pub fn write_index(buf_writer: &mut BufWriter<File>, key: &str, pointer: usize) 
     }
 }
 
-fn read(buf_reader: &mut BufReader<File>, length: usize) -> Vec<u8> {
+fn read(buf_reader: &mut BufReader<File>, length: usize) -> Result<Vec<u8>, IOError> {
     let mut bytes: Vec<u8> = vec![0; length];
     match buf_reader.read(&mut bytes) {
-        Ok(_) => bytes,
-        Err(e) => unimplemented!() // read に失敗したエラーを出したい IOError
+        Ok(_) => Ok(bytes),
+        Err(e) => Err(IOError::FailedReadFile(e.to_string())) // read に失敗したエラーを出したい IOError
     }
 }
 
-fn read_length(buf_reader: &mut BufReader<File>) -> usize {
-    let mut len_bytes:[u8; 8]  = [0; 8];
-    match buf_reader.read(&mut len_bytes) {
-        Ok(_) => usize::from_be_bytes(len_bytes),
-        Err(e) => unimplemented!()
+fn read_length(buf_reader: &mut BufReader<File>) -> Result<usize, IOError> {
+    let mut bytes:[u8; 8]  = [0; 8];
+    match buf_reader.read(&mut bytes) {
+        Ok(_) => Ok(usize::from_be_bytes(bytes)),
+        Err(e) => Err(IOError::FailedReadFile(e.to_string()))
     }
 }
 
-fn read_key(buf_reader: &mut BufReader<File>) -> String {
-    let length: usize = read_length(buf_reader);
-    let bytes: Vec<u8> = read(buf_reader, length);
-    match String::from_utf8(bytes) {
-        Ok(key) => key,
-        Err(e) => unimplemented!()
-    }
-}
-
-fn read_value(buf_reader: &mut BufReader<File>) -> Value {
-    let length: usize = read_length(buf_reader);
-    let bytes: Vec<u8> = read(buf_reader, length);
-    match Value::from_bytes(bytes) {
-        Ok(value) => value,
-        Err(e) => unimplemented!()
-    }
-}
-
-pub fn read_key_value(buf_reader: &mut BufReader<File>, offset: usize) -> (String, Value) {
+pub fn read_key_value(buf_reader: &mut BufReader<File>, offset: usize) -> Result<(Vec<u8>, Vec<u8>), IOError> {
     if let Err(e) = buf_reader.seek(std::io::SeekFrom::Start(offset as u64)) {
-        unimplemented!()
+        return Err(IOError::FailedSeek(e.to_string()))
     };
 
-    let key: String = read_key(buf_reader);
-    let value: Value = read_value(buf_reader);    
+    let mut map: HashMap<&str, Vec<u8>> = HashMap::new();
 
-    (key, value)
+    for k in ["key", "value"] {
+        let len = match read_length(buf_reader) {
+            Ok(l) => l,
+            Err(e) => return Err(e)
+        };
+
+        match read(buf_reader, len) {
+            Ok(v) => map.insert(k, v),
+            Err(e) => return Err(e)
+        };
+    }
+
+    let key = map.get("key").map(|v| v.clone()).unwrap();
+    let value = map.get("value").map(|v| v.clone()).unwrap();
+
+    Ok((key, value))
 }
 
-pub fn read_index(buf_reader: &mut BufReader<File>, offset: usize) -> (String, usize) {
+pub fn read_index(buf_reader: &mut BufReader<File>, offset: usize) -> Result<(Vec<u8>, Vec<u8>), IOError> {
     if let Err(e) = buf_reader.seek(std::io::SeekFrom::Start(offset as u64)) {
-        unimplemented!()
+        return Err(IOError::FailedSeek(e.to_string()))
     };
 
-    let key: String = read_key(buf_reader);
-
-    let mut bytes: [u8; 8] = [0; 8];
-    let pointer = match buf_reader.read(&mut bytes) {
-        Ok(_) => usize::from_be_bytes(bytes),
-        Err(e) => unimplemented!()
+    let length = match read_length(buf_reader) {
+        Ok(l) => l,
+        Err(e) => return Err(e)
+    };
+    
+    let key = match read(buf_reader, length) {
+        Ok(k) => k,
+        Err(e) => return Err(e)
     };
 
-    (key, pointer)
+    let pointer = match read(buf_reader, 8) {
+        Ok(p) => p,
+        Err(e) => return Err(e)
+    };
+
+    Ok((key, pointer))
 }

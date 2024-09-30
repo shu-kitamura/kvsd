@@ -21,7 +21,10 @@ impl KVS {
             // ディレクトリが無い or ファイルではない というエラーを出したい
             unimplemented!()
         }
-        let wal = WriteAheadLog::new(&data_dir, "wal");
+        let wal = match WriteAheadLog::new(&data_dir, "wal") {
+            Ok(w) => w,
+            Err(e) => unimplemented!()
+        };
         KVS {
             memtable: BTreeMap::new(),
             limit: 1024,

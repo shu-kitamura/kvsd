@@ -13,7 +13,7 @@ impl SSTable {
     pub fn create(data_dir: &PathBuf, memtable: &BTreeMap<String, Value>, filename: &str) -> Result<Self, IOError> {
         let mut data_path: PathBuf = data_dir.clone();
         data_path.push(format!("{}.dat", filename));
-        let mut data_writer: BufWriter<File> = match get_bufreader(&data_path) {
+        let mut data_writer: BufWriter<File> = match get_bufwriter(&data_path) {
             Ok(bw) => bw,
             Err(e) => return Err(e)
         };
@@ -21,7 +21,7 @@ impl SSTable {
 
         let mut index_path: PathBuf = data_dir.clone();
         index_path.push(format!("{}.idx", filename));
-        let mut index_writer = match get_bufreader(&index_path) {
+        let mut index_writer = match get_bufwriter(&index_path) {
             Ok(bw) => bw,
             Err(e) => return Err(e)
         };
@@ -58,17 +58,25 @@ impl SSTable {
         };
         let mut buf_reader: BufReader<File> = BufReader::new(file);
 
-        let (_, value) = read_key_value(&mut buf_reader, pointer);
+        let (_, bytes) = match read_key_value(&mut buf_reader, pointer) {
+            Ok(kv) => kv,
+            Err(e) => return Err(e)
+        };
+
+        let value = match Value::from_bytes(bytes) {
+            Ok(v) => v,
+            Err(e) => unimplemented!()
+        };
 
         Ok(Some(value))
     }
 }
 
-fn get_bufreader(path: &PathBuf) -> Result<BufWriter<File>, IOError> {
+fn get_bufwriter(path: &PathBuf) -> Result<BufWriter<File>, IOError> {
     match File::create(path) {
         Ok(f) => Ok(BufWriter::new(f)),
         Err(e) => return Err(
             IOError::FailedCreateFile(path.clone(), e.to_string())
         )
-}
+    }
 }
