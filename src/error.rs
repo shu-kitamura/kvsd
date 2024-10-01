@@ -38,7 +38,8 @@ pub enum IOError {
     FailedTruncateWAL(String),
     FailedReadFile(String),
     FailedGetFileSize(PathBuf, String),
-    FailedSeek(String)
+    FailedSeek(String),
+    DirectoryNotFound(PathBuf)
 }
 
 impl Display for IOError {
@@ -50,7 +51,8 @@ impl Display for IOError {
             IOError::FailedTruncateWAL(msg) => write!(f, "IOError: Failed to trancate WAL because the following error is occured.\n{msg}"),
             IOError::FailedReadFile(msg) => write!(f, "IOError: Failed to read file because the following error is occured.\n{msg}"),
             IOError::FailedGetFileSize(path, msg) => write!(f, "IOError: Failed to get file size of '{:?}' because the following error is occurd.\n{}", path, msg),
-            IOError::FailedSeek(msg) => write!(f, "IOError: Failed to seek file because the following error is occured.\n{msg}")
+            IOError::FailedSeek(msg) => write!(f, "IOError: Failed to seek file because the following error is occured.\n{msg}"),
+            IOError::DirectoryNotFound(path) => write!(f, "IOError: The directory '{:?}' is not found or is not directory.", path)
         }
     }
 }

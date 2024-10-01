@@ -1,5 +1,5 @@
 use std::{
-    collections::BTreeMap, path::PathBuf
+    collections::BTreeMap, error::Error, path::PathBuf
 };
 
 use crate::{
@@ -18,16 +18,21 @@ impl KVS {
     pub fn new() -> Result<Self, IOError> {
         let data_dir: PathBuf = PathBuf::from("./data/");
         if !data_dir.is_dir() {
-            // ディレクトリが無い or ファイルではない というエラーを出したい
-            unimplemented!()
+            return Err(IOError::DirectoryNotFound(data_dir))
         }
-        let wal: WriteAheadLog = match WriteAheadLog::new(&data_dir, "wal") {
+
+        let mut wal: WriteAheadLog = match WriteAheadLog::new(&data_dir, "wal") {
             Ok(w) => w,
             Err(e) => return Err(e)
         };
 
+        let memtable: BTreeMap<String, Value> = match wal.recovery() {
+            Ok(map) => map,
+            Err(e) => return Err(e)
+        };
+
         Ok(KVS {
-            memtable: BTreeMap::new(),
+            memtable,
             limit: 1024,
             wal, 
             data_dir,
