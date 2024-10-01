@@ -21,15 +21,8 @@ impl KVS {
             return Err(IOError::DirectoryNotFound(data_dir))
         }
 
-        let mut wal: WriteAheadLog = match WriteAheadLog::new(&data_dir, "wal") {
-            Ok(w) => w,
-            Err(e) => return Err(e)
-        };
-
-        let memtable: BTreeMap<String, Value> = match wal.recovery() {
-            Ok(map) => map,
-            Err(e) => return Err(e)
-        };
+        let mut wal: WriteAheadLog = WriteAheadLog::new(&data_dir, "wal")?;
+        let memtable: BTreeMap<String, Value> = wal.recovery()?;
 
         Ok(KVS {
             memtable,
@@ -79,24 +72,19 @@ impl KVS {
 
         // sstable からの取得。
         // memtable と同じく is_deleted が true の場合、None を返す。
-        match self.get_from_sstable(key) {
-            Ok(option) => if let Some(value) = option {
-                return match value.is_deleted() {
-                    true => Ok(None),
-                    false => Ok(Some(value))
-                }
+        if let Some(value) = self.get_from_sstable(key)? {
+            return match value.is_deleted() {
+                true => Ok(None),
+                false => Ok(Some(value))
             }
-            Err(e) => return Err(e)
         }
-
         Ok(None)
     }
 
     fn get_from_sstable(&mut self, key: &str) -> Result<Option<Value>, IOError> {
         for sstable in self.sstables.iter() {
-            match sstable.get(key) {
-                Ok(value) => return Ok(value),
-                Err(e) => return Err(e)
+            if let Some(value) = sstable.get(key)? {
+                return Ok(Some(value))
             }
         }
         Ok(None)

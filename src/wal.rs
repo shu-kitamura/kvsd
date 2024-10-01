@@ -69,10 +69,7 @@ impl WriteAheadLog {
         let mut offset: usize = 0;
         let mut btm: BTreeMap<String, Value> = BTreeMap::new();
         while offset < file_size {
-            let (key_bytes, value_bytes) = match read_key_value(&mut buf_reader, offset) {
-                Ok(kv) => kv,
-                Err(e) => return Err(e)
-            };
+            let (key_bytes, value_bytes) = read_key_value(&mut buf_reader, offset)?;
 
             let key = match String::from_utf8(key_bytes) {
                 Ok(s) => s,

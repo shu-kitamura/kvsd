@@ -13,18 +13,11 @@ impl SSTable {
     pub fn create(data_dir: &PathBuf, memtable: &BTreeMap<String, Value>, filename: &str) -> Result<Self, IOError> {
         let mut data_path: PathBuf = data_dir.clone();
         data_path.push(format!("{}.dat", filename));
-        let mut data_writer: BufWriter<File> = match get_bufwriter(&data_path) {
-            Ok(bw) => bw,
-            Err(e) => return Err(e)
-        };
-
+        let mut data_writer: BufWriter<File> = get_bufwriter(&data_path)?;
 
         let mut index_path: PathBuf = data_dir.clone();
         index_path.push(format!("{}.idx", filename));
-        let mut index_writer = match get_bufwriter(&index_path) {
-            Ok(bw) => bw,
-            Err(e) => return Err(e)
-        };
+        let mut index_writer = get_bufwriter(&index_path)?;
 
         let mut index: HashMap<String, usize> = HashMap::new();
         let mut pointer: usize = 0;
@@ -33,10 +26,7 @@ impl SSTable {
                 return Err(e)
             }
             index.insert(k.to_string(), pointer);
-            pointer += match write_key_value(&mut data_writer, k, v) {
-                Ok(size) => size,
-                Err(e) => return Err(e)
-            };
+            pointer += write_key_value(&mut data_writer, k, v)?;
         }
 
         Ok(SSTable { 
@@ -58,10 +48,7 @@ impl SSTable {
         };
         let mut buf_reader: BufReader<File> = BufReader::new(file);
 
-        let (_, bytes) = match read_key_value(&mut buf_reader, pointer) {
-            Ok(kv) => kv,
-            Err(e) => return Err(e)
-        };
+        let (_, bytes) = read_key_value(&mut buf_reader, pointer)?;
 
         let value = match Value::from_bytes(bytes) {
             Ok(v) => v,

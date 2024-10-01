@@ -51,12 +51,9 @@ pub fn read_key_value(buf_reader: &mut BufReader<File>, offset: usize) -> Result
     let mut map: HashMap<&str, Vec<u8>> = HashMap::new();
 
     for k in ["key", "value"] {
-        let len = match read_length(buf_reader) {
-            Ok(l) => l,
-            Err(e) => return Err(e)
-        };
+        let length = read_length(buf_reader)?;
 
-        match read(buf_reader, len) {
+        match read(buf_reader, length) {
             Ok(v) => map.insert(k, v),
             Err(e) => return Err(e)
         };
@@ -73,20 +70,9 @@ pub fn read_index(buf_reader: &mut BufReader<File>, offset: usize) -> Result<(Ve
         return Err(IOError::FailedSeek(e.to_string()))
     };
 
-    let length = match read_length(buf_reader) {
-        Ok(l) => l,
-        Err(e) => return Err(e)
-    };
-    
-    let key = match read(buf_reader, length) {
-        Ok(k) => k,
-        Err(e) => return Err(e)
-    };
-
-    let pointer = match read(buf_reader, 8) {
-        Ok(p) => p,
-        Err(e) => return Err(e)
-    };
+    let length: usize = read_length(buf_reader)?;
+    let key: Vec<u8> = read(buf_reader, length)?;
+    let pointer: Vec<u8> = read(buf_reader, 8)?;
 
     Ok((key, pointer))
 }
