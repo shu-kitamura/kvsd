@@ -1,5 +1,8 @@
 use std::{
-    collections::HashMap, fs::File, io::{BufReader, BufWriter, Read, Seek, Write}
+    collections::HashMap,
+    fs::{self, File},
+    io::{BufReader, BufWriter, Read, Seek, Write},
+    path::PathBuf
 };
 use crate::{
     error::IOError,
@@ -12,16 +15,6 @@ pub fn write_key_value(buf_writer: &mut BufWriter<File>, key: &str, value: &Valu
     let bytes: Vec<u8> = [key_bytes, value_bytes, vec![value.is_deleted() as u8]].concat();
 
     match buf_writer.write(&bytes) {
-        Ok(u) => Ok(u),
-        Err(e) => Err(IOError::FailedWriteBytes(e.to_string()))
-    }
-}
-
-pub fn write_index(buf_writer: &mut BufWriter<File>, key: &str, pointer: usize) -> Result<usize, IOError> {
-    let key_bytes: Vec<u8> = [&key.len().to_be_bytes(), key.as_bytes()].concat();
-    let pointer_bytes: Vec<u8> = pointer.to_be_bytes().to_vec();
-
-    match buf_writer.write(&[key_bytes, pointer_bytes].concat()) {
         Ok(u) => Ok(u),
         Err(e) => Err(IOError::FailedWriteBytes(e.to_string()))
     }
@@ -65,14 +58,9 @@ pub fn read_key_value(buf_reader: &mut BufReader<File>, offset: usize) -> Result
     Ok((key, value))
 }
 
-pub fn read_index(buf_reader: &mut BufReader<File>, offset: usize) -> Result<(Vec<u8>, Vec<u8>), IOError> {
-    if let Err(e) = buf_reader.seek(std::io::SeekFrom::Start(offset as u64)) {
-        return Err(IOError::FailedSeek(e.to_string()))
-    };
-
-    let length: usize = read_length(buf_reader)?;
-    let key: Vec<u8> = read(buf_reader, length)?;
-    let pointer: Vec<u8> = read(buf_reader, 8)?;
-
-    Ok((key, pointer))
+pub fn get_filesize(path: &PathBuf) -> Result<usize, IOError> {
+    match fs::metadata(path) {
+        Ok(metadata) => Ok(metadata.len() as usize),
+        Err(e) => return Err(IOError::FailedGetFileSize(path.clone(), e.to_string()))
+    }
 }

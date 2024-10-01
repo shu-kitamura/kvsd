@@ -1,4 +1,8 @@
-use std::{error::Error, fmt::{self, Display}, path::PathBuf};
+use std::{
+    error::Error,
+    fmt::{self, Display},
+    path::PathBuf
+};
 
 #[derive(Debug)]
 pub enum KVSError {
@@ -25,6 +29,7 @@ pub enum IOError {
     FailedTruncateWAL(String),
     FailedReadFile(String),
     FailedGetFileSize(PathBuf, String),
+    FailedGetFilePath(PathBuf, String),
     FailedSeek(String),
     DirectoryNotFound(PathBuf)
 }
@@ -38,6 +43,7 @@ impl Display for IOError {
             IOError::FailedTruncateWAL(msg) => write!(f, "IOError: Failed to trancate WAL because the following error is occured.\n{msg}"),
             IOError::FailedReadFile(msg) => write!(f, "IOError: Failed to read file because the following error is occured.\n{msg}"),
             IOError::FailedGetFileSize(path, msg) => write!(f, "IOError: Failed to get file size of '{:?}' because the following error is occurd.\n{}", path, msg),
+            IOError::FailedGetFilePath(dir_path, msg) => write!(f, "IOError: Failed to get file path in directory '{:?}' because the following error is occured.\n{}", dir_path, msg),
             IOError::FailedSeek(msg) => write!(f, "IOError: Failed to seek file because the following error is occured.\n{msg}"),
             IOError::DirectoryNotFound(path) => write!(f, "IOError: The directory '{:?}' is not found or is not directory.", path)
         }
@@ -56,7 +62,6 @@ impl Error for IOError {}
 pub enum ConvertError {
     FailedBytesToValue(String),
     FailedBytesToString(String),
-    FailedBytesToUsize(String)
 }
 
 impl Display for ConvertError {
@@ -64,7 +69,6 @@ impl Display for ConvertError {
         match self {
             ConvertError::FailedBytesToValue(msg) => write!(f, "ConvertError: Failed to convert bytes to Value the following error is occured.\n{msg}"),
             ConvertError::FailedBytesToString(msg) => write!(f, "ConvertError: Failed to convert bytes to String the following error is occured.\n{msg}"),
-            ConvertError::FailedBytesToUsize(msg) => write!(f, "ConvertError: Failed to convert bytes to usize the following error is occured.\n{msg}")
         }
     }
 }

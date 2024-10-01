@@ -1,17 +1,22 @@
 use std::{
-    collections::BTreeMap, error::Error, path::PathBuf
+    collections::BTreeMap,
+    fs,
+    path::PathBuf
 };
 
 use crate::{
-    error::{IOError, KVSError}, sstable::SSTable, value::Value, wal::WriteAheadLog
+    error::{IOError, KVSError},
+    sstable::SSTable,
+    value::Value,
+    wal::WriteAheadLog
 };
 
 pub struct KVS {
-    pub memtable: BTreeMap<String, Value>,
+    memtable: BTreeMap<String, Value>,
     limit: usize,
     data_dir: PathBuf,
-    pub wal: WriteAheadLog,
-    pub sstables: Vec<SSTable>
+    wal: WriteAheadLog,
+    sstables: Vec<SSTable>
 }
 
 impl KVS {
@@ -21,6 +26,7 @@ impl KVS {
             return Err(KVSError::FailedIO(IOError::DirectoryNotFound(data_dir)))
         }
 
+        let sstables: Vec<SSTable> = get_sstables(&data_dir)?;
         let mut wal: WriteAheadLog = WriteAheadLog::new(&data_dir, "wal")?;
         let memtable: BTreeMap<String, Value> = wal.recovery()?;
 
@@ -29,7 +35,7 @@ impl KVS {
             limit: 1024,
             wal, 
             data_dir,
-            sstables: Vec::new()
+            sstables
         })
     }
 
@@ -44,22 +50,17 @@ impl KVS {
     }
 
     fn put_key_value(&mut self, key: &str, value: Value) -> Result<(), IOError> {
-        if let Err(e) = self.wal.write(key, &value) {
-            return Err(e)
-        }
-
+        self.wal.write(key, &value)?;
         self.memtable.insert(key.to_string(), value);
 
         if self.limit < self.memtable.len() {
-            if let Err(e) = self.flush() {
-                return Err(e)
-            }
+            self.flush()?;
         }
 
         Ok(())
     }
     
-    pub fn get(&mut self, key: &str) -> Result<Option<Value>, IOError> {
+    pub fn get(&mut self, key: &str) -> Result<Option<Value>, KVSError> {
         // memtable からの取得。
         // 取得した value の is_deleted が true の場合、
         // その value は削除されているので None を返す。
@@ -81,8 +82,8 @@ impl KVS {
         Ok(None)
     }
 
-    fn get_from_sstable(&mut self, key: &str) -> Result<Option<Value>, IOError> {
-        for sstable in self.sstables.iter() {
+    fn get_from_sstable(&mut self, key: &str) -> Result<Option<Value>, KVSError> {
+        for sstable in self.sstables.iter().rev() {
             if let Some(value) = sstable.get(key)? {
                 return Ok(Some(value))
             }
@@ -106,8 +107,42 @@ impl KVS {
     }
 }
 
-fn row_len(key: String, value: Value) -> usize {
-    key.len() + value.len() + 8
+fn get_sstables(data_dir: &PathBuf) -> Result<Vec<SSTable>, KVSError> {
+    let data_files: Vec<PathBuf> = get_data_files(data_dir)?;
+    let mut sstables: Vec<SSTable> = Vec::new();
+
+    for file in data_files {
+        let sstable = SSTable::from_file(file)?;
+        sstables.push(sstable)
+    }
+    Ok(sstables)
 }
 
+fn get_data_files(data_dir: &PathBuf) -> Result<Vec<PathBuf>, IOError> {
+    let files: fs::ReadDir = match fs::read_dir(data_dir) {
+        Ok(read_dir) => read_dir,
+        Err(e) => return Err(IOError::FailedGetFilePath(data_dir.clone(), e.to_string()))
+    };
+
+    let mut data_files: Vec<PathBuf> = Vec::new();
+
+    for result in files {
+        let data_file: PathBuf = match result {
+            Ok(dir_entry) => dir_entry.path(),
+            Err(e) => return Err(IOError::FailedGetFilePath(data_dir.clone(), e.to_string()))
+        };
+
+        let mut extention: &str = "";
+        if let Some(ext_os_str) = data_file.extension() {
+            if let Some(ext_str) = ext_os_str.to_str() {
+                extention = ext_str
+            }
+        };
+
+        if extention == "dat" {
+            data_files.push(data_file)
+        };
+    }
+    Ok(data_files)
+}
 // ----- test -----

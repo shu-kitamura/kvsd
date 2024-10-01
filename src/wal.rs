@@ -1,10 +1,13 @@
 use std::{
-    collections::BTreeMap, fs::{self, File, OpenOptions}, io::{BufReader, BufWriter}, path::PathBuf
+    collections::BTreeMap,
+    fs::{File, OpenOptions},
+    io::{BufReader, BufWriter},
+    path::PathBuf
 };
 
 use crate::{
     error::{ConvertError, IOError, KVSError},
-    file_io::{read_key_value, write_key_value},
+    file_io::{get_filesize, read_key_value, write_key_value},
     value::Value
 };
 
@@ -59,12 +62,7 @@ impl WriteAheadLog {
             ))
         };
 
-        let file_size: usize = match fs::metadata(&self.path) {
-            Ok(metadata) => metadata.len() as usize,
-            Err(e) => return Err(KVSError::FailedIO(
-                IOError::FailedGetFileSize(self.path.clone(), e.to_string())
-            ))
-        };
+        let file_size: usize = get_filesize(&self.path)?;
 
         let mut offset: usize = 0;
         let mut btm: BTreeMap<String, Value> = BTreeMap::new();

@@ -1,5 +1,4 @@
 use std::fmt::{self, Display};
-
 use crate::error::ConvertError;
 
 #[derive(Debug, PartialEq, Clone)]
