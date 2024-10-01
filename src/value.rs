@@ -47,7 +47,6 @@ impl Value {
         };
 
         Ok(Value { value, is_delete })
-
     }
 }
 

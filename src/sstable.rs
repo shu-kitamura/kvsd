@@ -75,6 +75,35 @@ impl SSTable {
 
         Ok(Some(value))
     }
+
+    pub fn get_all(&self, mut btm: BTreeMap<String, Value>) -> Result<BTreeMap<String, Value>, KVSError> {
+        let mut buf_reader: BufReader<File> = get_bufreader(&self.data_path)?;
+        let file_size: usize = get_filesize(&self.data_path)?;
+
+        let mut offset: usize = 0;
+
+        while offset < file_size {
+            let (key_bytes, value_bytes) = read_key_value(&mut buf_reader, offset)?;
+
+            let key: String = match String::from_utf8(key_bytes) {
+                Ok(s) => s,
+                Err(e) => return Err(KVSError::FailedConvert(
+                    ConvertError::FailedBytesToString(e.to_string())
+                ))
+            };
+
+            let value: Value = Value::from_bytes(value_bytes)?;
+
+            offset += key.len() + value.len() + 9;
+            btm.insert(key, value);
+        }
+
+        Ok(btm)
+    }
+
+    pub fn keys(&self) -> Vec<&String> {
+        self.index.keys().collect::<Vec<&String>>()
+    }
 }
 
 fn get_bufwriter(path: &PathBuf) -> Result<BufWriter<File>, IOError> {

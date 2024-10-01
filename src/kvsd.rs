@@ -105,6 +105,26 @@ impl KVS {
 
         Ok(())
     }
+
+    pub fn compaction(&mut self) -> Result<(), KVSError>{
+        let mut btm: BTreeMap<String, Value> = BTreeMap::new();
+        for sstable in self.sstables.iter() {
+            for key in sstable.keys() {
+                if let Some(value) = sstable.get(key)? {
+                    btm.insert(key.to_string(), value);
+                }
+            }
+        }
+
+        clear_sstables(&self.data_dir)?;
+        self.sstables.clear();
+
+        let timestamp = chrono::Local::now().timestamp();
+        let sstable: SSTable = SSTable::create(&self.data_dir, &btm, &timestamp.to_string())?;
+        self.sstables.push(sstable);
+
+        Ok(())
+    }
 }
 
 fn get_sstables(data_dir: &PathBuf) -> Result<Vec<SSTable>, KVSError> {
@@ -144,5 +164,17 @@ fn get_data_files(data_dir: &PathBuf) -> Result<Vec<PathBuf>, IOError> {
         };
     }
     Ok(data_files)
+}
+
+fn clear_sstables(data_dir: &PathBuf) -> Result<(), IOError> {
+    let data_files: Vec<PathBuf> = get_data_files(data_dir)?;
+
+    for file in data_files {
+        if let Err(e) = fs::remove_file(&file) {
+            return Err(IOError::FailedRemoveFile(file, e.to_string()))
+        }
+    }
+
+    Ok(())
 }
 // ----- test -----
