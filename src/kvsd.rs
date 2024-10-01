@@ -15,23 +15,24 @@ pub struct KVS {
 }
 
 impl KVS {
-    pub fn new() -> Self {
+    pub fn new() -> Result<Self, IOError> {
         let data_dir: PathBuf = PathBuf::from("./data/");
         if !data_dir.is_dir() {
             // ディレクトリが無い or ファイルではない というエラーを出したい
             unimplemented!()
         }
-        let wal = match WriteAheadLog::new(&data_dir, "wal") {
+        let wal: WriteAheadLog = match WriteAheadLog::new(&data_dir, "wal") {
             Ok(w) => w,
-            Err(e) => unimplemented!()
+            Err(e) => return Err(e)
         };
-        KVS {
+
+        Ok(KVS {
             memtable: BTreeMap::new(),
             limit: 1024,
             wal, 
             data_dir,
             sstables: Vec::new()
-        }
+        })
     }
 
     pub fn put(&mut self, k: &str, v: &str) -> Result<(), IOError> {
@@ -40,20 +41,18 @@ impl KVS {
     }
 
     pub fn delete(&mut self, k: &str) -> Result<(), IOError> {
-        let value = Value::new("", true);
+        let value: Value = Value::new("", true);
         self.put_key_value(k, value)
     }
 
     fn put_key_value(&mut self, key: &str, value: Value) -> Result<(), IOError> {
-        let writed_size = match self.wal.write(key, &value) {
-            Ok(size) => size,
-            Err(e) => return Err(e)
-        };
+        if let Err(e) = self.wal.write(key, &value) {
+            return Err(e)
+        }
+
         self.memtable.insert(key.to_string(), value);
 
-        if self.limit >= writed_size {
-            self.limit -= writed_size
-        } else {
+        if self.limit < self.memtable.len() {
             if let Err(e) = self.flush() {
                 return Err(e)
             }

@@ -14,7 +14,7 @@ mod wal;
 mod file_io;
 
 fn main() {
-    let mut kvs = KVS::new();
+    let mut kvs = KVS::new().unwrap();
     kvs.put("k1", "value1");
     kvs.put("k3", "value3");
     kvs.put("k2", "value2");
