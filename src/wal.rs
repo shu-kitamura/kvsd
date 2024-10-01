@@ -3,7 +3,7 @@ use std::{
 };
 
 use crate::{
-    error::IOError,
+    error::{ConvertError, IOError, KVSError},
     file_io::{read_key_value, write_key_value},
     value::Value
 };
@@ -51,19 +51,19 @@ impl WriteAheadLog {
         }
     }
 
-    pub fn recovery(&mut self) -> Result<BTreeMap<String, Value>, IOError> {
+    pub fn recovery(&mut self) -> Result<BTreeMap<String, Value>, KVSError> {
         let mut buf_reader: BufReader<File> = match File::open(&self.path) {
             Ok(f) => BufReader::new(f),
-            Err(e) => return Err(
-                IOError::FailedOpenFile(self.path.clone(), e.to_string())
-            )
+            Err(e) => return Err(KVSError::FailedIO(
+                    IOError::FailedOpenFile(self.path.clone(), e.to_string())
+            ))
         };
 
         let file_size: usize = match fs::metadata(&self.path) {
             Ok(metadata) => metadata.len() as usize,
-            Err(e) => return Err(
+            Err(e) => return Err(KVSError::FailedIO(
                 IOError::FailedGetFileSize(self.path.clone(), e.to_string())
-            )
+            ))
         };
 
         let mut offset: usize = 0;
@@ -71,15 +71,14 @@ impl WriteAheadLog {
         while offset < file_size {
             let (key_bytes, value_bytes) = read_key_value(&mut buf_reader, offset)?;
 
-            let key = match String::from_utf8(key_bytes) {
+            let key: String = match String::from_utf8(key_bytes) {
                 Ok(s) => s,
-                Err(e) => unimplemented!()
+                Err(e) => return Err(KVSError::FailedConvert(
+                    ConvertError::FailedBytesToString(e.to_string())
+                ))
             };
 
-            let value = match Value::from_bytes(value_bytes) {
-                Ok(v) => v,
-                Err(e) => unimplemented!()
-            };
+            let value: Value = Value::from_bytes(value_bytes)?;
 
             offset += key.len() + value.len() + 9;
             btm.insert(key, value);

@@ -1,34 +1,21 @@
 use std::{error::Error, fmt::{self, Display}, path::PathBuf};
 
-#[derive(Debug, PartialEq)]
-pub enum ValueError {
-    FailedFromBytes(String)
+#[derive(Debug)]
+pub enum KVSError {
+    FailedIO(IOError),
+    FailedConvert(ConvertError),
 }
 
-impl Display for ValueError {
+impl Display for KVSError {
     fn fmt (&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ValueError::FailedFromBytes(msg) => write!(f, "ValueError : Following error is occured to convert bytes -> Value.\n{msg}")
+            Self::FailedIO(e) => write!(f, "{}", e.to_string()),
+            Self::FailedConvert(e) => write!(f, "{}", e.to_string()),
         }
     }
 }
 
-impl Error for ValueError {}
-
-#[derive(Debug, PartialEq)]
-pub enum SSTableError {
-    FailedCreateFile(String, String)
-}
-
-impl Display for SSTableError {
-    fn fmt (&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            SSTableError::FailedCreateFile(filename, msg) => write!(f, "SSTableError: Failed to create '{filename}' because the following reason.\n{msg}")
-        }
-    }
-}
-
-impl Error for SSTableError {}
+impl Error for KVSError {}
 
 #[derive(Debug, PartialEq)]
 pub enum IOError {
@@ -57,6 +44,12 @@ impl Display for IOError {
     }
 }
 
+impl From<IOError> for KVSError {
+    fn from(value: IOError) -> Self {
+        KVSError::FailedIO(value)
+    }
+}
+
 impl Error for IOError {}
 
 #[derive(Debug)]
@@ -77,3 +70,9 @@ impl Display for ConvertError {
 }
 
 impl Error for ConvertError {}
+
+impl From<ConvertError> for KVSError {
+    fn from(value: ConvertError) -> Self {
+        KVSError::FailedConvert(value)
+    }
+}

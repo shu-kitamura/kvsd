@@ -3,7 +3,7 @@ use std::{
 };
 
 use crate::{
-    error::IOError, sstable::SSTable, value::Value, wal::WriteAheadLog
+    error::{IOError, KVSError}, sstable::SSTable, value::Value, wal::WriteAheadLog
 };
 
 pub struct KVS {
@@ -15,10 +15,10 @@ pub struct KVS {
 }
 
 impl KVS {
-    pub fn new() -> Result<Self, IOError> {
+    pub fn new() -> Result<Self, KVSError> {
         let data_dir: PathBuf = PathBuf::from("./data/");
         if !data_dir.is_dir() {
-            return Err(IOError::DirectoryNotFound(data_dir))
+            return Err(KVSError::FailedIO(IOError::DirectoryNotFound(data_dir)))
         }
 
         let mut wal: WriteAheadLog = WriteAheadLog::new(&data_dir, "wal")?;

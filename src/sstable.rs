@@ -1,6 +1,6 @@
 use std::{collections::{BTreeMap, HashMap}, fs::File, io::{BufReader, BufWriter}, path::PathBuf};
 
-use crate::{error::{IOError, SSTableError}, file_io::{read_key_value, write_index, write_key_value}, value::Value};
+use crate::{error::IOError, file_io::{read_key_value, write_index, write_key_value}, value::Value};
 
 #[derive(Debug)]
 pub struct SSTable {
