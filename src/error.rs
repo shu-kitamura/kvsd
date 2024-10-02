@@ -83,7 +83,7 @@ impl From<ConvertError> for KVSError {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum ParseError {
     CommandNotDefine(String),
     InvalidArguments,
