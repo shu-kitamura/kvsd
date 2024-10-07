@@ -1,15 +1,19 @@
+mod error;
+mod sstable;
+mod value;
+mod wal;
+mod file_io;
+
 use std::{
     collections::BTreeMap,
     fs,
     path::PathBuf
 };
 
-use crate::{
-    error::{IOError, KVSError},
-    sstable::SSTable,
-    value::Value,
-    wal::WriteAheadLog
-};
+use error::{IOError, KVSError};
+use sstable::SSTable;
+use value::Value;
+use wal::WriteAheadLog;
 
 pub struct KVS {
     memtable: BTreeMap<String, Value>,

@@ -82,18 +82,3 @@ impl From<ConvertError> for KVSError {
         KVSError::FailedConvert(value)
     }
 }
-
-#[derive(Debug, PartialEq)]
-pub enum ParseError {
-    CommandNotDefine(String),
-    InvalidArguments,
-}
-
-impl Display for ParseError {
-    fn fmt (&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            ParseError::CommandNotDefine(cmd) => write!(f, "ParseError: The command '{cmd}' is not defined."),
-            ParseError::InvalidArguments => write!(f, "ParseError: Invalid arguments.")
-        }
-    }
-}
