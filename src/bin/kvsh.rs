@@ -1,21 +1,22 @@
 use std::{
-    fmt::{self,Display}, io::{self, Write}, usize
+    fmt::{self,Display}, io::{self, Read, Write}, net::TcpStream, usize
 };
 
 #[derive(Debug, PartialEq)]
-pub enum ParseError {
+pub enum CommandError {
     CommandNotDefine(String),
-    InvalidArguments,
 }
 
-impl Display for ParseError {
+impl Display for CommandError {
     fn fmt (&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ParseError::CommandNotDefine(cmd) => write!(f, "ParseError: The command '{cmd}' is not defined."),
-            ParseError::InvalidArguments => write!(f, "ParseError: Invalid arguments.")
+            CommandError::CommandNotDefine(cmd) => write!(f, "ParseError: The command '{cmd}' is not defined."),
         }
     }
 }
+
+const DEFAULT_PORT: usize = 54321;
+const DEFAULT_HOST: &str = "localhost";
 
 fn main() {
     loop {
@@ -51,7 +52,22 @@ fn main() {
                 if b {
                     match oper.as_str() {
                         "exit" => return,
-                        "put" | "delete" | "get" => { }, // サーバに送る処理
+                        "put" | "delete" => {
+                            if let Err(e) = send_request(DEFAULT_HOST, DEFAULT_PORT, &input) {
+                                eprintln!("{e}")
+                            }
+                        }
+                        "get" => {
+                            match send_request(DEFAULT_HOST, DEFAULT_PORT, &input) {
+                                Ok(res) => match String::from_utf8(res.to_vec()) {
+                                    Ok(value) => {
+                                        println!("{}", value.replace("\0", "").trim());
+                                    }
+                                    Err(e) => eprintln!("{e}")
+                                }
+                                Err(e) => eprintln!("{e}")
+                            }
+                        }
                         _ => unreachable!()
                     }
                 } else {
@@ -63,7 +79,20 @@ fn main() {
     }
 }
 
-fn check_input(input: &str) -> Result<(String, Option<bool>), ParseError> {
+fn send_request(host: &str, port: usize, request: &str) -> Result<[u8; 1024], io::Error> {
+    let address: String = format!("{host}:{port}");
+    let mut stream: TcpStream = TcpStream::connect(address)?;
+
+    stream.write(request.as_bytes())?;
+
+    // response を read する
+    let mut response: [u8; 1024] = [0u8; 1024];
+    stream.read(&mut response)?;
+
+    Ok(response)
+}
+
+fn check_input(input: &str) -> Result<(String, Option<bool>), CommandError> {
     let input_vec: Vec<&str> = input.split_whitespace().collect();
     match input_vec.len() {
         0 => Ok((String::new(), None)),
@@ -86,12 +115,12 @@ fn check_input(input: &str) -> Result<(String, Option<bool>), ParseError> {
     }
 }
 
-fn check_args(operation: &str, args_len: usize) -> Result<bool, ParseError> {
+fn check_args(operation: &str, args_len: usize) -> Result<bool, CommandError> {
     let check_res: bool = match operation {
         "put" => args_len == 2,
         "get" | "delete" => args_len == 1,
         "exit" => args_len == 0,
-        _ => return Err(ParseError::CommandNotDefine(operation.to_string()))
+        _ => return Err(CommandError::CommandNotDefine(operation.to_string()))
     };
     Ok(check_res)
 }
@@ -151,6 +180,6 @@ mod tests {
         assert_eq!(crate::check_args("exit", 1), Ok(false));
 
         // 他のコマンドのケース(エラー)
-        assert_eq!(crate::check_args("error", 0), Err(crate::ParseError::CommandNotDefine("error".to_string())))
+        assert_eq!(crate::check_args("error", 0), Err(crate::CommandError::CommandNotDefine("error".to_string())))
     }
 }

@@ -23,15 +23,18 @@ pub struct KVS {
     sstables: Vec<SSTable>
 }
 
+const DEFAULT_DATA_DIR: &str = "./data/";
+const DEFAULT_WAL_FILENAME: &str = "wal";
+
 impl KVS {
     pub fn new() -> Result<Self, KVSError> {
-        let data_dir: PathBuf = PathBuf::from("./data/");
+        let data_dir: PathBuf = PathBuf::from(DEFAULT_DATA_DIR);
         if !data_dir.is_dir() {
             return Err(KVSError::FailedIO(IOError::DirectoryNotFound(data_dir)))
         }
 
         let sstables: Vec<SSTable> = get_sstables(&data_dir)?;
-        let mut wal: WriteAheadLog = WriteAheadLog::new(&data_dir, "wal")?;
+        let mut wal: WriteAheadLog = WriteAheadLog::new(&data_dir, DEFAULT_WAL_FILENAME)?;
         let memtable: BTreeMap<String, Value> = wal.recovery()?;
 
         Ok(KVS {
@@ -181,4 +184,3 @@ fn clear_sstables(data_dir: &PathBuf) -> Result<(), IOError> {
 
     Ok(())
 }
-// ----- test -----
