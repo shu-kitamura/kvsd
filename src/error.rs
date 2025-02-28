@@ -36,17 +36,17 @@ pub enum IOError {
 }
 
 impl Display for IOError {
-    fn fmt (&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            IOError::FailedWriteBytes(msg) => write!(f, "IOError: Failed to write bytes because the following error is occured.\n{msg}"),
-            IOError::FailedOpenFile(path, msg) => write!(f, "IOError: Failed to open '{:?}' because the following error is occurd.\n{}", path, msg),
-            IOError::FailedCreateFile(path, msg) => write!(f, "IOError: Failed to create '{:?}' because the following error is occurd.\n{}", path, msg),
-            IOError::FailedTruncateWAL(msg) => write!(f, "IOError: Failed to trancate WAL because the following error is occured.\n{msg}"),
-            IOError::FailedReadFile(msg) => write!(f, "IOError: Failed to read file because the following error is occured.\n{msg}"),
-            IOError::FailedRemoveFile(path, msg) => write!(f, "IOError: Failed to remove '{:?}' because the following error is occured.\n{}", path, msg),
-            IOError::FailedGetFileSize(path, msg) => write!(f, "IOError: Failed to get file size of '{:?}' because the following error is occurd.\n{}", path, msg),
-            IOError::FailedGetFilePath(dir_path, msg) => write!(f, "IOError: Failed to get file path in directory '{:?}' because the following error is occured.\n{}", dir_path, msg),
-            IOError::FailedSeek(msg) => write!(f, "IOError: Failed to seek file because the following error is occured.\n{msg}"),
+            IOError::FailedWriteBytes(msg) => write!(f, "IOError: Failed to write bytes because the following error occurred.\n{msg}"),
+            IOError::FailedOpenFile(path, msg) => write!(f, "IOError: Failed to open '{:?}' because the following error occurred.\n{}", path, msg),
+            IOError::FailedCreateFile(path, msg) => write!(f, "IOError: Failed to create '{:?}' because the following error occurred.\n{}", path, msg),
+            IOError::FailedTruncateWAL(msg) => write!(f, "IOError: Failed to truncate WAL because the following error occurred.\n{msg}"),
+            IOError::FailedReadFile(msg) => write!(f, "IOError: Failed to read file because the following error occurred.\n{msg}"),
+            IOError::FailedRemoveFile(path, msg) => write!(f, "IOError: Failed to remove '{:?}' because the following error occurred.\n{}", path, msg),
+            IOError::FailedGetFileSize(path, msg) => write!(f, "IOError: Failed to get file size of '{:?}' because the following error occurred.\n{}", path, msg),
+            IOError::FailedGetFilePath(dir_path, msg) => write!(f, "IOError: Failed to get file path in directory '{:?}' because the following error occurred.\n{}", dir_path, msg),
+            IOError::FailedSeek(msg) => write!(f, "IOError: Failed to seek file because the following error occurred.\n{msg}"),
             IOError::DirectoryNotFound(path) => write!(f, "IOError: The directory '{:?}' is not found or is not directory.", path)
         }
     }
@@ -67,10 +67,10 @@ pub enum ConvertError {
 }
 
 impl Display for ConvertError {
-    fn fmt (&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ConvertError::FailedBytesToValue(msg) => write!(f, "ConvertError: Failed to convert bytes to Value the following error is occured.\n{msg}"),
-            ConvertError::FailedBytesToString(msg) => write!(f, "ConvertError: Failed to convert bytes to String the following error is occured.\n{msg}"),
+            ConvertError::FailedBytesToValue(msg) => write!(f, "ConvertError: Failed to convert bytes to Value because the following error occurred.\n{msg}"),
+            ConvertError::FailedBytesToString(msg) => write!(f, "ConvertError: Failed to convert bytes to String because the following error occurred.\n{msg}"),
         }
     }
 }
