@@ -1,5 +1,5 @@
-use std::fmt::{self, Display};
 use crate::error::ConvertError;
+use std::fmt::{self, Display};
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Value {
@@ -23,27 +23,30 @@ impl Value {
         self.is_delete
     }
 
-    pub fn to_bytes(self) -> Vec<u8> {
+    pub fn to_bytes(&self) -> Vec<u8> {
         let value = self.value.as_bytes();
-        let value_len = (self.value.len()+1).to_be_bytes();
+        let value_len = (self.value.len() + 1).to_be_bytes();
         let is_del = u8::from(self.is_delete).to_be_bytes();
         [&value_len, value, &is_del].concat()
     }
 
     pub fn from_bytes(bytes: Vec<u8>) -> Result<Self, ConvertError> {
         // 0 ~ length-1 までが value 本体
-        let value: String = match String::from_utf8(bytes[0..bytes.len()-1].to_vec()){
+        let value: String = match String::from_utf8(bytes[0..bytes.len() - 1].to_vec()) {
             Ok(s) => s,
-            Err(e) => return Err(ConvertError::FailedBytesToValue(e.to_string()))
+            Err(e) => return Err(ConvertError::FailedBytesToValue(e.to_string())),
         };
 
         // 最後1バイトがtrue か false (1ならtrue)
-        let is_delete: bool = match bytes[bytes.len()-1] {
+        let is_delete: bool = match bytes[bytes.len() - 1] {
             0 => false,
             1 => true,
-            _ => return Err(ConvertError::FailedBytesToValue(
-                format!("Invalid value '{}' is read. is_delete expect '0' or '1'", bytes[bytes.len()-1])
-            ))
+            _ => {
+                return Err(ConvertError::FailedBytesToValue(format!(
+                    "Invalid value '{}' is read. is_delete expect '0' or '1'",
+                    bytes[bytes.len() - 1]
+                )))
+            }
         };
 
         Ok(Value { value, is_delete })
@@ -51,7 +54,7 @@ impl Value {
 }
 
 impl Display for Value {
-    fn fmt (&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.value)
     }
 }
@@ -66,13 +69,13 @@ mod tests {
     fn test_value_new() {
         let t = Value {
             value: "value".to_string(),
-            is_delete: true
+            is_delete: true,
         };
         assert_eq!(Value::new("value", true), t);
 
         let f = Value {
             value: "value".to_string(),
-            is_delete: false
+            is_delete: false,
         };
         assert_eq!(Value::new("value", false), f);
     }
@@ -86,26 +89,26 @@ mod tests {
     #[test]
     fn test_is_deleted() {
         let t = Value::new("v", true);
-        assert_eq!(t.is_deleted(), true);
-        
+        assert!(t.is_deleted());
+
         let f = Value::new("v", false);
-        assert_eq!(f.is_deleted(), false);
+        assert!(!f.is_deleted());
     }
 
     #[test]
     fn test_to_bytes() {
         let v: Vec<u8> = vec![
-            0, 0, 0, 0, 0, 0, 0, 6,  // 6 (length of value)
-            118, 97, 108, 117, 101,  // value
-            1                        // true
+            0, 0, 0, 0, 0, 0, 0, 6, // 6 (length of value)
+            118, 97, 108, 117, 101, // value
+            1,   // true
         ];
         let t = Value::new("value", true);
         assert_eq!(t.to_bytes(), v);
 
         let v: Vec<u8> = vec![
-            0, 0, 0, 0, 0, 0, 0, 6,  // 6 (length of value)
-            118, 97, 108, 117, 101,  // value
-            0                        // false
+            0, 0, 0, 0, 0, 0, 0, 6, // 6 (length of value)
+            118, 97, 108, 117, 101, // value
+            0,   // false
         ];
         let t = Value::new("value", false);
         assert_eq!(t.to_bytes(), v);
@@ -125,11 +128,11 @@ mod tests {
     #[test]
     fn test_display() {
         let str_true = "test_true";
-        let t = Value::new(&str_true, true);
+        let t = Value::new(str_true, true);
         assert_eq!(format!("{t}"), String::from(str_true));
 
         let str_false = "test_false";
-        let f = Value::new(&str_false, true);
+        let f = Value::new(str_false, true);
         assert_eq!(format!("{f}"), String::from(str_false));
     }
 }

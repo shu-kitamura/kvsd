@@ -1,7 +1,9 @@
-use std::{io::{Read, Write}, net::{TcpListener, TcpStream}};
+use std::{
+    io::{Read, Write},
+    net::{TcpListener, TcpStream},
+};
 
 use kvsd::KVS;
-
 
 const DEFAULT_PORT: &str = "54321";
 const DEFAULT_HOST: &str = "localhost";
@@ -11,7 +13,7 @@ fn main() {
         Ok(k) => k,
         Err(e) => {
             eprintln!("{} [ERROR] {}", get_now(), e);
-            return
+            return;
         }
     };
 
@@ -28,7 +30,7 @@ fn main() {
                 address,
                 e
             );
-            return
+            return;
         }
     };
 
@@ -43,7 +45,7 @@ fn main() {
                         previous_compaction = now_timestamp;
                     }
                 }
-            },
+            }
             Err(e) => {
                 eprintln!("{} [ERROR] {}", get_now(), e)
             }
@@ -51,16 +53,15 @@ fn main() {
     }
 }
 
-
 fn handle(mut stream: &TcpStream, kvs: &mut KVS) {
     let mut buf: [u8; 1024] = [0u8; 1024];
     stream.read(&mut buf).unwrap();
 
-    let input: String  = match String::from_utf8(buf.to_vec()) {
+    let input: String = match String::from_utf8(buf.to_vec()) {
         Ok(string) => string.replace("\0", "").trim().to_string(),
         Err(e) => {
             eprintln!("{} [ERROR] {}", get_now(), e);
-            return
+            return;
         }
     };
 
@@ -77,18 +78,18 @@ fn handle(mut stream: &TcpStream, kvs: &mut KVS) {
                     eprintln!("{} [ERROR] {}", get_now(), e)
                 };
             }
-        },
+        }
         "delete" => {
             if let Err(e) = kvs.delete(cmd[1]) {
                 eprintln!("{} [ERROR] {}", get_now(), e)
             };
-        },
+        }
         "put" => {
             if let Err(e) = kvs.put(cmd[1], cmd[2]) {
                 eprintln!("{} [ERROR] {}", get_now(), e)
             };
         }
-        _ => unreachable!()
+        _ => unreachable!(),
     }
 }
 

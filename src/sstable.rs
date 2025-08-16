@@ -2,21 +2,29 @@ use std::{
     collections::{BTreeMap, HashMap},
     fs::File,
     io::{BufReader, BufWriter},
-    path::PathBuf
+    path::{Path, PathBuf},
 };
 
-use crate::{error::{IOError, KVSError, ConvertError}, file_io::{get_filesize, read_key_value, write_key_value}, value::Value};
+use crate::{
+    error::{ConvertError, IOError, KVSError},
+    file_io::{get_filesize, read_key_value, write_key_value},
+    value::Value,
+};
 
 #[derive(Debug)]
 pub struct SSTable {
     pub data_path: PathBuf,
-    index: HashMap<String, usize>
+    index: HashMap<String, usize>,
 }
 
 impl SSTable {
-    pub fn create(data_dir: &PathBuf, memtable: &BTreeMap<String, Value>, filename: &str) -> Result<Self, IOError> {
-        let mut data_path: PathBuf = data_dir.clone();
-        data_path.push(format!("{}.dat", filename));
+    pub fn create(
+        data_dir: &Path,
+        memtable: &BTreeMap<String, Value>,
+        filename: &str,
+    ) -> Result<Self, IOError> {
+        let mut data_path: PathBuf = data_dir.to_path_buf();
+        data_path.push(format!("{filename}.dat"));
         let mut data_writer: BufWriter<File> = get_bufwriter(&data_path)?;
 
         let mut pointer: usize = 0;
@@ -26,9 +34,9 @@ impl SSTable {
             pointer = write_key_value(&mut data_writer, k, v)?;
         }
 
-        Ok(SSTable { 
-            data_path: data_path,
-            index: index
+        Ok(SSTable {
+            data_path,
+            index,
         })
     }
 
@@ -44,9 +52,11 @@ impl SSTable {
 
             let key: String = match String::from_utf8(key_bytes) {
                 Ok(s) => s,
-                Err(e) => return Err(KVSError::FailedConvert(
-                    ConvertError::FailedBytesToString(e.to_string())
-                ))
+                Err(e) => {
+                    return Err(KVSError::FailedConvert(ConvertError::FailedBytesToString(
+                        e.to_string(),
+                    )))
+                }
             };
 
             let key_len = key.len();
@@ -56,16 +66,16 @@ impl SSTable {
             offset += key_len + value_len + 9;
         }
 
-        Ok(SSTable{
+        Ok(SSTable {
             data_path: path,
-            index: index
+            index,
         })
     }
 
     pub fn get(&self, key: &str) -> Result<Option<Value>, KVSError> {
         let pointer = match self.index.get(key) {
             Some(p) => *p,
-            None => return Ok(None)
+            None => return Ok(None),
         };
 
         let mut buf_reader: BufReader<File> = get_bufreader(&self.data_path)?;
@@ -84,17 +94,13 @@ impl SSTable {
 fn get_bufwriter(path: &PathBuf) -> Result<BufWriter<File>, IOError> {
     match File::create(path) {
         Ok(f) => Ok(BufWriter::new(f)),
-        Err(e) => return Err(
-            IOError::FailedCreateFile(path.clone(), e.to_string())
-        )
+        Err(e) => Err(IOError::FailedCreateFile(path.clone(), e.to_string())),
     }
 }
 
 fn get_bufreader(path: &PathBuf) -> Result<BufReader<File>, IOError> {
     match File::open(path) {
         Ok(f) => Ok(BufReader::new(f)),
-        Err(e) => return Err(
-            IOError::FailedOpenFile(path.clone(), e.to_string())
-        )
+        Err(e) => Err(IOError::FailedOpenFile(path.clone(), e.to_string())),
     }
 }

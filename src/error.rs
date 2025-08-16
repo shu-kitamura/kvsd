@@ -1,7 +1,7 @@
 use std::{
     error::Error,
     fmt::{self, Display},
-    path::PathBuf
+    path::PathBuf,
 };
 
 #[derive(Debug)]
@@ -11,10 +11,10 @@ pub enum KVSError {
 }
 
 impl Display for KVSError {
-    fn fmt (&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::FailedIO(e) => write!(f, "{}", e.to_string()),
-            Self::FailedConvert(e) => write!(f, "{}", e.to_string()),
+            Self::FailedIO(e) => write!(f, "{e}"),
+            Self::FailedConvert(e) => write!(f, "{e}"),
         }
     }
 }
@@ -32,22 +32,22 @@ pub enum IOError {
     FailedGetFileSize(PathBuf, String),
     FailedGetFilePath(PathBuf, String),
     FailedSeek(String),
-    DirectoryNotFound(PathBuf)
+    DirectoryNotFound(PathBuf),
 }
 
 impl Display for IOError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             IOError::FailedWriteBytes(msg) => write!(f, "IOError: Failed to write bytes because the following error occurred.\n{msg}"),
-            IOError::FailedOpenFile(path, msg) => write!(f, "IOError: Failed to open '{:?}' because the following error occurred.\n{}", path, msg),
-            IOError::FailedCreateFile(path, msg) => write!(f, "IOError: Failed to create '{:?}' because the following error occurred.\n{}", path, msg),
+            IOError::FailedOpenFile(path, msg) => write!(f, "IOError: Failed to open '{path:?}' because the following error occurred.\n{msg}"),
+            IOError::FailedCreateFile(path, msg) => write!(f, "IOError: Failed to create '{path:?}' because the following error occurred.\n{msg}"),
             IOError::FailedTruncateWAL(msg) => write!(f, "IOError: Failed to truncate WAL because the following error occurred.\n{msg}"),
             IOError::FailedReadFile(msg) => write!(f, "IOError: Failed to read file because the following error occurred.\n{msg}"),
-            IOError::FailedRemoveFile(path, msg) => write!(f, "IOError: Failed to remove '{:?}' because the following error occurred.\n{}", path, msg),
-            IOError::FailedGetFileSize(path, msg) => write!(f, "IOError: Failed to get file size of '{:?}' because the following error occurred.\n{}", path, msg),
-            IOError::FailedGetFilePath(dir_path, msg) => write!(f, "IOError: Failed to get file path in directory '{:?}' because the following error occurred.\n{}", dir_path, msg),
+            IOError::FailedRemoveFile(path, msg) => write!(f, "IOError: Failed to remove '{path:?}' because the following error occurred.\n{msg}"),
+            IOError::FailedGetFileSize(path, msg) => write!(f, "IOError: Failed to get file size of '{path:?}' because the following error occurred.\n{msg}"),
+            IOError::FailedGetFilePath(dir_path, msg) => write!(f, "IOError: Failed to get file path in directory '{dir_path:?}' because the following error occurred.\n{msg}"),
             IOError::FailedSeek(msg) => write!(f, "IOError: Failed to seek file because the following error occurred.\n{msg}"),
-            IOError::DirectoryNotFound(path) => write!(f, "IOError: The directory '{:?}' is not found or is not directory.", path)
+            IOError::DirectoryNotFound(path) => write!(f, "IOError: The directory '{path:?}' is not found or is not directory.")
         }
     }
 }
