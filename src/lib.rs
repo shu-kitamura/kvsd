@@ -64,9 +64,6 @@ impl KVS {
     }
 
     pub fn get(&mut self, key: &str) -> Result<Option<Value>, KVSError> {
-        // memtable からの取得。
-        // 取得した value の is_deleted が true の場合、
-        // その value は削除されているので None を返す。
         if let Some(value) = self.memtable.get(key) {
             return match value.is_deleted() {
                 true => Ok(None),
@@ -74,8 +71,6 @@ impl KVS {
             };
         }
 
-        // sstable からの取得。
-        // memtable と同じく is_deleted が true の場合、None を返す。
         if let Some(value) = self.get_from_sstable(key)? {
             return match value.is_deleted() {
                 true => Ok(None),

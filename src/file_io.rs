@@ -25,7 +25,7 @@ fn read(buf_reader: &mut BufReader<File>, length: usize) -> Result<Vec<u8>, IOEr
     let mut bytes: Vec<u8> = vec![0; length];
     match buf_reader.read(&mut bytes) {
         Ok(_) => Ok(bytes),
-        Err(e) => Err(IOError::FailedReadFile(e.to_string())), // read に失敗したエラーを出したい IOError
+        Err(e) => Err(IOError::FailedReadFile(e.to_string())),
     }
 }
 
