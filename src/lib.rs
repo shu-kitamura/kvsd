@@ -11,11 +11,17 @@ use sstable::SSTable;
 use value::Value;
 use wal::WriteAheadLog;
 
+/// A key-value store.
 pub struct KVS {
+    /// In-memory key-value store.
     memtable: BTreeMap<String, Value>,
+    /// The maximum number of key-value pairs to store in the memtable.
     limit: usize,
+    /// The directory where the data files are stored.
     data_dir: PathBuf,
+    /// The write-ahead log for durability.
     wal: WriteAheadLog,
+    /// The list of SSTables.
     sstables: Vec<SSTable>,
 }
 
@@ -23,6 +29,13 @@ const DEFAULT_DATA_DIR: &str = "./data/";
 const DEFAULT_WAL_FILENAME: &str = "wal";
 
 impl KVS {
+    /// Creates a new `KVS` instance.
+    ///
+    /// This function initializes the `KVS` by:
+    /// - Setting the data directory.
+    /// - Loading existing SSTables.
+    /// - Initializing the write-ahead log.
+    /// - Recovering the memtable from the WAL.
     pub fn new() -> Result<Self, KVSError> {
         let data_dir: PathBuf = PathBuf::from(DEFAULT_DATA_DIR);
         if !data_dir.is_dir() {
@@ -42,16 +55,28 @@ impl KVS {
         })
     }
 
+    /// Inserts a key-value pair into the store.
+    ///
+    /// # Arguments
+    ///
+    /// * `k` - The key.
+    /// * `v` - The value.
     pub fn put(&mut self, k: &str, v: &str) -> Result<(), IOError> {
         let value: Value = Value::new(v, false);
         self.put_key_value(k, value)
     }
 
+    /// Deletes a key-value pair from the store.
+    ///
+    /// # Arguments
+    ///
+    /// * `k` - The key to delete.
     pub fn delete(&mut self, k: &str) -> Result<(), IOError> {
         let value: Value = Value::new("", true);
         self.put_key_value(k, value)
     }
 
+    /// A helper function to put a key-value pair into the memtable and WAL.
     fn put_key_value(&mut self, key: &str, value: Value) -> Result<(), IOError> {
         self.wal.write(key, &value)?;
         self.memtable.insert(key.to_string(), value);
@@ -63,6 +88,13 @@ impl KVS {
         Ok(())
     }
 
+    /// Retrieves a value from the store by its key.
+    ///
+    /// It first searches the memtable, then the SSTables.
+    ///
+    /// # Arguments
+    ///
+    /// * `key` - The key to retrieve.
     pub fn get(&mut self, key: &str) -> Result<Option<Value>, KVSError> {
         if let Some(value) = self.memtable.get(key) {
             return match value.is_deleted() {
@@ -80,6 +112,7 @@ impl KVS {
         Ok(None)
     }
 
+    /// Retrieves a value from the SSTables by its key.
     fn get_from_sstable(&mut self, key: &str) -> Result<Option<Value>, KVSError> {
         for sstable in self.sstables.iter().rev() {
             if let Some(value) = sstable.get(key)? {
@@ -89,6 +122,7 @@ impl KVS {
         Ok(None)
     }
 
+    /// Flushes the memtable to an SSTable.
     pub fn flush(&mut self) -> Result<(), IOError> {
         let timestamp = chrono::Local::now().timestamp();
         match SSTable::create(&self.data_dir, &self.memtable, &timestamp.to_string()) {
@@ -104,6 +138,7 @@ impl KVS {
         Ok(())
     }
 
+    /// Compacts the SSTables into a single SSTable.
     pub fn compaction(&mut self) -> Result<(), KVSError> {
         let mut btm: BTreeMap<String, Value> = BTreeMap::new();
         for sstable in self.sstables.iter() {
@@ -125,6 +160,7 @@ impl KVS {
     }
 }
 
+/// Gets a list of SSTables from the data directory.
 fn get_sstables(data_dir: &PathBuf) -> Result<Vec<SSTable>, KVSError> {
     let data_files: Vec<PathBuf> = get_data_files(data_dir)?;
     let mut sstables: Vec<SSTable> = Vec::new();
@@ -136,6 +172,7 @@ fn get_sstables(data_dir: &PathBuf) -> Result<Vec<SSTable>, KVSError> {
     Ok(sstables)
 }
 
+/// Gets a list of data files from the data directory.
 fn get_data_files(data_dir: &PathBuf) -> Result<Vec<PathBuf>, IOError> {
     let files: fs::ReadDir = match fs::read_dir(data_dir) {
         Ok(read_dir) => read_dir,
@@ -164,6 +201,7 @@ fn get_data_files(data_dir: &PathBuf) -> Result<Vec<PathBuf>, IOError> {
     Ok(data_files)
 }
 
+/// Clears all SSTables from the data directory.
 fn clear_sstables(data_dir: &PathBuf) -> Result<(), IOError> {
     let data_files: Vec<PathBuf> = get_data_files(data_dir)?;
 

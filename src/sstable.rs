@@ -11,13 +11,23 @@ use crate::{
     value::Value,
 };
 
+/// Represents a Sorted String Table (SSTable).
 #[derive(Debug)]
 pub struct SSTable {
+    /// The path to the data file.
     pub data_path: PathBuf,
+    /// The in-memory index of keys to their offsets in the data file.
     index: HashMap<String, usize>,
 }
 
 impl SSTable {
+    /// Creates a new SSTable from a memtable.
+    ///
+    /// # Arguments
+    ///
+    /// * `data_dir` - The directory to store the data file in.
+    /// * `memtable` - The memtable to create the SSTable from.
+    /// * `filename` - The name of the data file.
     pub fn create(
         data_dir: &Path,
         memtable: &BTreeMap<String, Value>,
@@ -34,12 +44,14 @@ impl SSTable {
             pointer = write_key_value(&mut data_writer, k, v)?;
         }
 
-        Ok(SSTable {
-            data_path,
-            index,
-        })
+        Ok(SSTable { data_path, index })
     }
 
+    /// Loads an SSTable from a file.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - The path to the data file.
     pub fn from_file(path: PathBuf) -> Result<Self, KVSError> {
         let mut buf_reader: BufReader<File> = get_bufreader(&path)?;
         let file_size: usize = get_filesize(&path)?;
@@ -72,6 +84,11 @@ impl SSTable {
         })
     }
 
+    /// Gets a value from the SSTable by its key.
+    ///
+    /// # Arguments
+    ///
+    /// * `key` - The key to get.
     pub fn get(&self, key: &str) -> Result<Option<Value>, KVSError> {
         let pointer = match self.index.get(key) {
             Some(p) => *p,
@@ -86,11 +103,13 @@ impl SSTable {
         Ok(Some(value))
     }
 
+    /// Returns a list of all keys in the SSTable.
     pub fn keys(&self) -> Vec<&String> {
         self.index.keys().collect::<Vec<&String>>()
     }
 }
 
+/// Gets a buffered writer for a file.
 fn get_bufwriter(path: &PathBuf) -> Result<BufWriter<File>, IOError> {
     match File::create(path) {
         Ok(f) => Ok(BufWriter::new(f)),
@@ -98,6 +117,7 @@ fn get_bufwriter(path: &PathBuf) -> Result<BufWriter<File>, IOError> {
     }
 }
 
+/// Gets a buffered reader for a file.
 fn get_bufreader(path: &PathBuf) -> Result<BufReader<File>, IOError> {
     match File::open(path) {
         Ok(f) => Ok(BufReader::new(f)),

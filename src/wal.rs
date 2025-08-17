@@ -11,12 +11,20 @@ use crate::{
     value::Value,
 };
 
+/// Represents a Write-Ahead Log (WAL).
 #[derive(Debug, PartialEq)]
 pub struct WriteAheadLog {
+    /// The path to the WAL file.
     path: PathBuf,
 }
 
 impl WriteAheadLog {
+    /// Creates a new `WriteAheadLog`.
+    ///
+    /// # Arguments
+    ///
+    /// * `data_dir` - The directory to store the WAL file in.
+    /// * `filename` - The name of the WAL file.
     pub fn new(data_dir: &Path, filename: &str) -> Result<Self, IOError> {
         let mut path: PathBuf = data_dir.to_path_buf();
         path.push(filename);
@@ -30,6 +38,12 @@ impl WriteAheadLog {
         Ok(WriteAheadLog { path })
     }
 
+    /// Writes a key-value pair to the WAL.
+    ///
+    /// # Arguments
+    ///
+    /// * `key` - The key to write.
+    /// * `value` - The value to write.
     pub fn write(&mut self, key: &str, value: &Value) -> Result<usize, IOError> {
         let mut writer: BufWriter<File> = match OpenOptions::new().append(true).open(&self.path) {
             Ok(f) => BufWriter::new(f),
@@ -38,6 +52,7 @@ impl WriteAheadLog {
         write_key_value(&mut writer, key, value)
     }
 
+    /// Clears the WAL.
     pub fn clear(&mut self) -> Result<(), IOError> {
         match File::create(&self.path) {
             Ok(f) => match f.set_len(0) {
@@ -48,6 +63,7 @@ impl WriteAheadLog {
         }
     }
 
+    /// Recovers the memtable from the WAL.
     pub fn recovery(&mut self) -> Result<BTreeMap<String, Value>, KVSError> {
         let mut buf_reader: BufReader<File> = match File::open(&self.path) {
             Ok(f) => BufReader::new(f),

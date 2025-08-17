@@ -4,9 +4,14 @@ use std::{
     path::PathBuf,
 };
 
+/// The main error type for the KVS library.
+///
+/// It encapsulates all other error types.
 #[derive(Debug)]
 pub enum KVSError {
+    /// Represents an I/O error.
     FailedIO(IOError),
+    /// Represents an error during data conversion.
     FailedConvert(ConvertError),
 }
 
@@ -21,17 +26,28 @@ impl Display for KVSError {
 
 impl Error for KVSError {}
 
+/// Represents an I/O error that can occur in the KVS library.
 #[derive(Debug, PartialEq)]
 pub enum IOError {
+    /// Failed to write bytes to a file.
     FailedWriteBytes(String),
+    /// Failed to open a file.
     FailedOpenFile(PathBuf, String),
+    /// Failed to create a file.
     FailedCreateFile(PathBuf, String),
+    /// Failed to truncate the Write-Ahead Log.
     FailedTruncateWAL(String),
+    /// Failed to read from a file.
     FailedReadFile(String),
+    /// Failed to remove a file.
     FailedRemoveFile(PathBuf, String),
+    /// Failed to get the size of a file.
     FailedGetFileSize(PathBuf, String),
+    /// Failed to get a file path from a directory.
     FailedGetFilePath(PathBuf, String),
+    /// Failed to seek within a file.
     FailedSeek(String),
+    /// The specified directory was not found.
     DirectoryNotFound(PathBuf),
 }
 
@@ -60,9 +76,12 @@ impl From<IOError> for KVSError {
 
 impl Error for IOError {}
 
+/// Represents an error that can occur during data conversion.
 #[derive(Debug)]
 pub enum ConvertError {
+    /// Failed to convert bytes to a `Value`.
     FailedBytesToValue(String),
+    /// Failed to convert bytes to a `String`.
     FailedBytesToString(String),
 }
 

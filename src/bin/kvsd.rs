@@ -8,6 +8,7 @@ use kvsd::KVS;
 const DEFAULT_PORT: &str = "54321";
 const DEFAULT_HOST: &str = "localhost";
 
+/// The main function for the key-value store server.
 fn main() {
     let mut kvs: KVS = match KVS::new() {
         Ok(k) => k,
@@ -53,6 +54,7 @@ fn main() {
     }
 }
 
+/// Handles a single client connection.
 fn handle(mut stream: &TcpStream, kvs: &mut KVS) {
     let mut buf: [u8; 1024] = [0u8; 1024];
     stream.read(&mut buf).unwrap();
@@ -93,6 +95,7 @@ fn handle(mut stream: &TcpStream, kvs: &mut KVS) {
     }
 }
 
+/// Gets the current time as a formatted string.
 fn get_now() -> String {
     let now = chrono::Local::now();
     now.format("%F %T%.3f").to_string()

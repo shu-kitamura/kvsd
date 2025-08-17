@@ -1,13 +1,22 @@
 use crate::error::ConvertError;
 use std::fmt::{self, Display};
 
+/// Represents a value in the key-value store.
 #[derive(Debug, PartialEq, Clone)]
 pub struct Value {
+    /// The value itself.
     value: String,
+    /// Whether the value has been deleted.
     is_delete: bool,
 }
 
 impl Value {
+    /// Creates a new `Value`.
+    ///
+    /// # Arguments
+    ///
+    /// * `string` - The string value.
+    /// * `is_del` - A flag indicating if the value is deleted.
     pub fn new(string: &str, is_del: bool) -> Self {
         Value {
             value: string.to_string(),
@@ -15,14 +24,17 @@ impl Value {
         }
     }
 
+    /// Returns the length of the value in bytes, including metadata.
     pub fn len(&self) -> usize {
         self.value.len() + 9
     }
 
+    /// Returns `true` if the value is marked as deleted.
     pub fn is_deleted(&self) -> bool {
         self.is_delete
     }
 
+    /// Converts the `Value` to a byte vector.
     pub fn to_bytes(&self) -> Vec<u8> {
         let value = self.value.as_bytes();
         let value_len = (self.value.len() + 1).to_be_bytes();
@@ -30,6 +42,7 @@ impl Value {
         [&value_len, value, &is_del].concat()
     }
 
+    /// Creates a `Value` from a byte vector.
     pub fn from_bytes(bytes: Vec<u8>) -> Result<Self, ConvertError> {
         // 0 ~ length-1 までが value 本体
         let value: String = match String::from_utf8(bytes[0..bytes.len() - 1].to_vec()) {

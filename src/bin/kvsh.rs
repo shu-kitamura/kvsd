@@ -5,8 +5,10 @@ use std::{
     usize,
 };
 
+/// Represents an error that can occur when parsing a command.
 #[derive(Debug, PartialEq)]
 pub enum CommandError {
+    /// The specified command is not defined.
     CommandNotDefine(String),
 }
 
@@ -23,6 +25,7 @@ impl Display for CommandError {
 const DEFAULT_PORT: usize = 54321;
 const DEFAULT_HOST: &str = "localhost";
 
+/// The main function for the key-value store shell.
 fn main() {
     loop {
         print!("> ");
@@ -82,6 +85,7 @@ fn main() {
     }
 }
 
+/// Sends a request to the key-value store server.
 fn send_request(host: &str, port: usize, request: &str) -> Result<[u8; 1024], io::Error> {
     let address: String = format!("{host}:{port}");
     let mut stream: TcpStream = TcpStream::connect(address)?;
@@ -95,6 +99,7 @@ fn send_request(host: &str, port: usize, request: &str) -> Result<[u8; 1024], io
     Ok(response)
 }
 
+/// Checks the validity of the user's input.
 fn check_input(input: &str) -> Result<(String, Option<bool>), CommandError> {
     let input_vec: Vec<&str> = input.split_whitespace().collect();
     match input_vec.len() {
@@ -118,6 +123,7 @@ fn check_input(input: &str) -> Result<(String, Option<bool>), CommandError> {
     }
 }
 
+/// Checks if the number of arguments for a given operation is correct.
 fn check_args(operation: &str, args_len: usize) -> Result<bool, CommandError> {
     let check_res: bool = match operation {
         "put" => args_len == 2,
